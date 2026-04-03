@@ -38,6 +38,7 @@ export default function DashboardPage() {
 
   // ---- Computed stats ----
   const generalChecklist = state.checklist.filter((i) => !i.companyId && !i.eventId);
+  const eventChecklist = state.checklist.filter((i) => i.eventId);
   const generalDone = generalChecklist.filter((i) => i.completed).length;
   const generalTotal = generalChecklist.length;
 
@@ -102,6 +103,7 @@ export default function DashboardPage() {
     technical: "Technical",
     "system-design": "System Design",
     presentation: "Presentation",
+    mixed: "Mixed",
     other: "Other",
   };
 
@@ -211,6 +213,26 @@ export default function DashboardPage() {
 
   // Selected date events
   const selectedDateEvents = selectedDate ? getEventsForDateStr(selectedDate) : [];
+
+  function dotColor(cat: string) {
+    if (cat === "interview") return "bg-indigo-500";
+    if (cat === "practice") return "bg-green-500";
+    if (cat === "networking") return "bg-amber-500";
+    return "bg-gray-400";
+  }
+
+  function typeBadge(ev: typeof upcomingEvents[0]) {
+    if (!ev.interviewType) return null;
+    const config: Record<string, { label: string; cls: string }> = {
+      behavioral: { label: "Behavioral", cls: "bg-blue-50 text-blue-600" },
+      case: { label: "Case", cls: "bg-purple-50 text-purple-600" },
+      "recruiter-screen": { label: "Recruiter Screen", cls: "bg-teal-50 text-teal-700" },
+      presentation: { label: "Presentation", cls: "bg-orange-50 text-orange-600" },
+      mixed: { label: "Mixed", cls: "bg-pink-50 text-pink-600" },
+      other: { label: "Other", cls: "bg-gray-100 text-gray-500" },
+    };
+    return config[ev.interviewType] ?? null;
+  }
 
   return (
     <div>
@@ -385,13 +407,41 @@ export default function DashboardPage() {
 
             return (
               <div className="space-y-1">
+                <div className="px-3 pb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">General Prep</p>
+                </div>
                 {dated.map(renderItem)}
                 {dated.length > 0 && undated.length > 0 && (
                   <div className="px-3 pt-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-300">No date</p>
+                    <p className="text-xs text-gray-400">No date</p>
                   </div>
                 )}
                 {undated.map(renderItem)}
+                {/* Event-specific tasks */}
+                {(() => {
+                  const eventGroups = new Map<string, { title: string; items: typeof eventChecklist }>();
+                  eventChecklist.forEach((item) => {
+                    const ev = state.events.find((e) => e.id === item.eventId);
+                    const key = item.eventId!;
+                    if (!eventGroups.has(key)) {
+                      eventGroups.set(key, { title: ev?.title ?? "Event", items: [] });
+                    }
+                    eventGroups.get(key)!.items.push(item);
+                  });
+                  return eventGroups.size > 0 ? (
+                    <>
+                      <div className="px-3 pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company Prep</p>
+                      </div>
+                      {Array.from(eventGroups.entries()).map(([eventId, group]) => (
+                        <div key={eventId}>
+                          <p className="px-3 pt-2 text-xs text-gray-400">{group.title}</p>
+                          {group.items.map(renderItem)}
+                        </div>
+                      ))}
+                    </>
+                  ) : null;
+                })()}
               </div>
             );
           })()}
@@ -419,29 +469,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {calendarView === "list" && (() => {
+          {(() => {
             const practiceEvents = upcomingEvents.filter((ev) => ev.category === "practice");
             const interviewEvents = upcomingEvents.filter((ev) => ev.category === "interview");
-
-            const typeBadge = (ev: typeof upcomingEvents[0]) => {
-              if (!ev.interviewType) return null;
-              const config: Record<string, { label: string; cls: string }> = {
-                behavioral: { label: "Behavioral", cls: "bg-blue-50 text-blue-600" },
-                case: { label: "Case", cls: "bg-purple-50 text-purple-600" },
-                "recruiter-screen": { label: "Recruiter Screen", cls: "bg-teal-50 text-teal-700" },
-                presentation: { label: "Presentation", cls: "bg-orange-50 text-orange-600" },
-                mixed: { label: "Mixed", cls: "bg-pink-50 text-pink-600" },
-                other: { label: "Other", cls: "bg-gray-100 text-gray-500" },
-              };
-              return config[ev.interviewType] ?? null;
-            };
-
-            const dotColor = (cat: string) => {
-              if (cat === "interview") return "bg-indigo-500";
-              if (cat === "practice") return "bg-green-500";
-              if (cat === "networking") return "bg-amber-500";
-              return "bg-gray-400";
-            };
 
             const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
               const badge = typeBadge(ev);
@@ -470,9 +500,9 @@ export default function DashboardPage() {
                   { value: "other", label: "Other", bg: "bg-gray-100 text-gray-500", active: "bg-gray-500 text-white" },
                 ];
                 const interviewTypes = [
+                  { value: "recruiter-screen", label: "Recruiter Screen", bg: "bg-teal-50 text-teal-600", active: "bg-teal-500 text-white" },
                   { value: "behavioral", label: "Behavioral", bg: "bg-blue-50 text-blue-600", active: "bg-blue-500 text-white" },
                   { value: "case", label: "Case", bg: "bg-purple-50 text-purple-600", active: "bg-purple-500 text-white" },
-                  { value: "recruiter-screen", label: "Recruiter Screen", bg: "bg-teal-50 text-teal-600", active: "bg-teal-500 text-white" },
                   { value: "presentation", label: "Presentation", bg: "bg-orange-50 text-orange-600", active: "bg-orange-500 text-white" },
                   { value: "mixed", label: "Mixed", bg: "bg-pink-50 text-pink-600", active: "bg-pink-500 text-white" },
                   { value: "other", label: "Other", bg: "bg-gray-100 text-gray-500", active: "bg-gray-500 text-white" },
@@ -717,7 +747,8 @@ export default function DashboardPage() {
               );
             };
 
-            return (
+            return (<>
+          {calendarView === "list" && (
               <div>
                 {/* Sub-toggle */}
                 <div className="mb-3 flex rounded-lg border border-gray-200 w-fit">
@@ -762,8 +793,7 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-            );
-          })()}
+          )}
 
           {calendarView === "week" && (
             <div>
@@ -836,13 +866,21 @@ export default function DashboardPage() {
                             }`}
                           >
                             {ev.startTime && <span className="font-normal opacity-75">{ev.startTime} </span>}
-                            {ev.title.length > 10 ? ev.title.slice(0, 10) + "…" : ev.title}
+                            {(() => {
+                              const tb = typeBadge(ev);
+                              return tb ? tb.label : (ev.title.length > 10 ? ev.title.slice(0, 10) + "…" : ev.title);
+                            })()}
                           </div>
                         ))}
                       </div>
                     </div>
                   );
                 })}
+              </div>
+              <div className="flex items-center gap-4 pt-3 text-xs text-gray-400">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Interview</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /> Practice</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> Networking</span>
               </div>
               {/* Edit form for week view */}
               {editingEventId && (() => {
@@ -944,6 +982,8 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+          </>);
+          })()}
         </div>
       </div>
 
@@ -987,9 +1027,9 @@ export default function DashboardPage() {
                 { value: "case", label: "Case", active: "bg-purple-500 text-white", inactive: "bg-purple-50 text-purple-600" },
                 { value: "other", label: "Other", active: "bg-gray-500 text-white", inactive: "bg-gray-100 text-gray-500" },
               ] : [
+                { value: "recruiter-screen", label: "Recruiter Screen", active: "bg-teal-500 text-white", inactive: "bg-teal-50 text-teal-600" },
                 { value: "behavioral", label: "Behavioral", active: "bg-blue-500 text-white", inactive: "bg-blue-50 text-blue-600" },
                 { value: "case", label: "Case", active: "bg-purple-500 text-white", inactive: "bg-purple-50 text-purple-600" },
-                { value: "recruiter-screen", label: "Recruiter Screen", active: "bg-teal-500 text-white", inactive: "bg-teal-50 text-teal-600" },
                 { value: "presentation", label: "Presentation", active: "bg-orange-500 text-white", inactive: "bg-orange-50 text-orange-600" },
                 { value: "mixed", label: "Mixed", active: "bg-pink-500 text-white", inactive: "bg-pink-50 text-pink-600" },
                 { value: "other", label: "Other", active: "bg-gray-500 text-white", inactive: "bg-gray-100 text-gray-500" },
@@ -1129,7 +1169,16 @@ function SelectedDatePanel({
                   <span className="text-sm font-medium text-gray-900">{ev.title}</span>
                   <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
                     ev.category === "interview" ? "bg-indigo-100 text-indigo-700" : "bg-green-100 text-green-700"
-                  }`}>{ev.category === "interview" ? "Interview" : "Practice"}</span>
+                  }`}>{(() => {
+                    const typeConfig: Record<string, string> = {
+                      behavioral: "Behavioral", case: "Case", "recruiter-screen": "Recruiter Screen",
+                      presentation: "Presentation", mixed: "Mixed",
+                    };
+                    const iType = (ev as unknown as { interviewType?: string }).interviewType;
+                    return iType
+                      ? typeConfig[iType] ?? (ev.category === "interview" ? "Interview" : "Practice")
+                      : ev.category === "interview" ? "Interview" : ev.category === "practice" ? "Practice" : ev.category === "networking" ? "Networking" : "Other";
+                  })()}</span>
                 </div>
                 {ev.startTime && (
                   <p className="mt-1 ml-4 text-xs text-gray-500">
