@@ -277,7 +277,7 @@ export default function ApplicationsPage() {
           {/* Table */}
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-3 py-3">
                     <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0}
@@ -299,12 +299,13 @@ export default function ApplicationsPage() {
                         </button>
                       </div>
                       {activeFilter === col.key && (() => {
-                        const allValues = Array.from(new Set(state.applications.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean))).sort();
+                        const allValues = Array.from(new Set(state.applications.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
+                          .sort(col.key === "appliedDate" ? (a, b) => b.localeCompare(a) : undefined);
                         const fq = filterSearch.toLowerCase();
                         const filteredValues = fq ? allValues.filter((v) => v.toLowerCase().includes(fq)) : allValues;
-                        return (
-                        <div className="absolute z-20 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg"
-                          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setTimeout(() => { setActiveFilter(null); setFilterSearch(""); }, 150); }}>
+                        return (<>
+                        <div className="fixed inset-0 z-30" onClick={() => { setActiveFilter(null); setFilterSearch(""); }} />
+                        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="p-1.5">
                             <input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} autoFocus
                               placeholder="Search..."
@@ -326,7 +327,7 @@ export default function ApplicationsPage() {
                               </button>
                             ))}
                           </div>
-                        </div>);
+                        </div></>);
                       })()}
                     </th>
                   ))}
@@ -466,7 +467,7 @@ export default function ApplicationsPage() {
         <>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
@@ -582,9 +583,9 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && (
-        <div className="absolute z-20 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5"
-          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setTimeout(() => setOpen(false), 150); }}>
+      {open && (<>
+        <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
           {VERDICTS.map((v) => (
             <button key={v} onClick={() => { onChange(v); setOpen(false); }}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === v ? "bg-gray-50" : ""}`}>
@@ -592,7 +593,7 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
             </button>
           ))}
         </div>
-      )}
+      </>)}
     </div>
   );
 }
