@@ -41,7 +41,7 @@ export default function ApplicationsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [showAllApps, setShowAllApps] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(15);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
 
@@ -83,11 +83,8 @@ export default function ApplicationsPage() {
     return result;
   }, [state.applications, search, verdictFilter, sortKey, sortDir]);
 
-  const oneMonthAgo = new Date();
-  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-  const recentApps = filtered.filter((a) => !a.appliedDate || new Date(a.appliedDate + "T12:00:00") >= oneMonthAgo);
-  const olderApps = filtered.filter((a) => a.appliedDate && new Date(a.appliedDate + "T12:00:00") < oneMonthAgo);
-  const displayedApps = showAllApps ? filtered : recentApps;
+  const displayedApps = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > visibleCount;
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -224,11 +221,18 @@ export default function ApplicationsPage() {
               placeholder="Search company or role..."
               className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
-            <select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-              <option value="all">All verdicts</option>
-              {uniqueVerdicts.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
+          </div>
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            <button onClick={() => setVerdictFilter("all")}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${verdictFilter === "all" ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-500 opacity-60 hover:opacity-80"}`}>
+              All
+            </button>
+            {uniqueVerdicts.map((v) => (
+              <button key={v} onClick={() => setVerdictFilter(verdictFilter === v ? "all" : v)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${verdictFilter === v ? getVerdictClass(v) + " ring-2 ring-indigo-400" : getVerdictClass(v) + " opacity-60 hover:opacity-80"}`}>
+                {v}
+              </button>
+            ))}
           </div>
 
           {/* Bulk actions */}
@@ -248,7 +252,7 @@ export default function ApplicationsPage() {
             </div>
           )}
 
-          <p className="mb-2 text-xs text-gray-400">{displayedApps.length} shown{!showAllApps && olderApps.length > 0 ? ` · ${olderApps.length} older hidden` : ""}</p>
+          <p className="mb-2 text-xs text-gray-400">{displayedApps.length} of {filtered.length} shown</p>
 
           {/* Table */}
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -289,9 +293,8 @@ export default function ApplicationsPage() {
                       className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
                   <td className="px-4 py-2.5">
-                    {newCompany && <input type="text" value={newDate} onChange={(e) => setNewDate(e.target.value)} placeholder="Date"
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
-                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                    {newCompany && <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
+                      className="text-sm text-gray-400 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
                   <td className="px-4 py-2.5">
                     {newCompany && <input value={newMethod} onChange={(e) => setNewMethod(e.target.value)} placeholder="Method"
@@ -336,9 +339,8 @@ export default function ApplicationsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-gray-500">
                       {editingCell?.id === app.id && editingCell.field === "appliedDate" ? (
-                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={handleKeyDown} autoFocus
-                          placeholder="YYYY-MM-DD or YYYY"
-                          className="w-28 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                        <input type="date" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={handleKeyDown} autoFocus
+                          className="rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
                       ) : (
                         <span onClick={() => startEdit(app.id, "appliedDate", app.appliedDate)} className="cursor-pointer">
                           {app.appliedDate
@@ -405,16 +407,16 @@ export default function ApplicationsPage() {
             )}
           </div>
 
-          {!showAllApps && olderApps.length > 0 && (
-            <button onClick={() => setShowAllApps(true)}
+          {hasMore && (
+            <button onClick={() => setVisibleCount((c) => c + 15)}
               className="mt-3 w-full rounded-lg border border-gray-200 bg-white py-2.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
-              Show {olderApps.length} older applications
+              Show more ({filtered.length - visibleCount} remaining)
             </button>
           )}
-          {showAllApps && olderApps.length > 0 && (
-            <button onClick={() => setShowAllApps(false)}
-              className="mt-3 w-full text-center text-xs text-gray-400 hover:text-gray-600">
-              Hide older applications
+          {visibleCount > 15 && (
+            <button onClick={() => setVisibleCount(15)}
+              className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600">
+              Show less
             </button>
           )}
 
