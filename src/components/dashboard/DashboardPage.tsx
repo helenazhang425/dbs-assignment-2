@@ -408,6 +408,10 @@ export default function DashboardPage() {
           {(() => {
             // Sort: dated first (ascending), then undated
             const sortedGeneral = [...generalChecklist].sort((a, b) => {
+              // Completed items go to bottom
+              if (a.completed && !b.completed) return 1;
+              if (!a.completed && b.completed) return -1;
+              // Then dated before undated
               if (a.dueDate && !b.dueDate) return -1;
               if (!a.dueDate && b.dueDate) return 1;
               if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -509,7 +513,7 @@ export default function DashboardPage() {
                       placeholder="Add a task"
                       className="flex-1 text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600"
                     />
-                    <label className={`cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative ${newItem ? "opacity-100" : "opacity-0"}`}>
+                    <label className="cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -602,7 +606,8 @@ export default function DashboardPage() {
                   .map((sectionId) => {
                     const ev = state.events.find((e) => e.id === sectionId);
                     const sectionTitle = ev?.title ?? sectionId.startsWith("custom-") ? eventChecklist.find((t) => t.eventId === sectionId)?.text ?? "Custom" : sectionId;
-                    const evTasks = eventChecklist.filter((t) => t.eventId === sectionId);
+                    const evTasks = eventChecklist.filter((t) => t.eventId === sectionId)
+                      .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
                     return (
                       <div key={sectionId} className="group/section">
                         <div className="flex items-center px-3 pt-2">
@@ -965,7 +970,8 @@ export default function DashboardPage() {
                   </div>
                   {/* Per-event tasks (from checklist) */}
                   {(() => {
-                    const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
+                    const evTasks = state.checklist.filter((t) => t.eventId === ev.id)
+                      .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
                     return (
                       <div className="mt-2 border-t border-gray-50 pt-2" onClick={(e) => e.stopPropagation()}>
                         {evTasks.length > 0 && (
