@@ -431,6 +431,7 @@ export default function DashboardPage() {
                   return eventGroups.size > 0 ? (
                     <>
                       <div className="px-3 pt-3">
+                        <div className="border-t border-gray-200 mt-2" />
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company Prep</p>
                       </div>
                       {Array.from(eventGroups.entries()).map(([eventId, group]) => (
@@ -856,7 +857,7 @@ export default function DashboardPage() {
                         {dayEvents.map((ev) => (
                           <div
                             key={ev.id}
-                            onClick={(e) => { e.stopPropagation(); setEditingEventId(ev.id); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedDate(dateStr); }}
                             className={`cursor-pointer rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 ${
                               ev.category === "interview"
                                 ? "bg-indigo-100 text-indigo-700"
@@ -894,6 +895,7 @@ export default function DashboardPage() {
                   events={getEventsForDateStr(selectedDate)}
                   checklist={state.checklist}
                   dispatch={dispatch}
+                  onEditEvent={(id) => setEditingEventId(id)}
                 />
               )}
             </div>
@@ -978,6 +980,7 @@ export default function DashboardPage() {
                   events={getEventsForDateStr(selectedDate)}
                   checklist={state.checklist}
                   dispatch={dispatch}
+                  onEditEvent={(id) => setEditingEventId(id)}
                 />
               )}
             </div>
@@ -1143,11 +1146,13 @@ function SelectedDatePanel({
   events,
   checklist,
   dispatch,
+  onEditEvent,
 }: {
   dateStr: string;
   events: ReturnType<typeof Array.prototype.filter>;
   checklist: { id: string; text: string; completed: boolean; companyId: string | null }[];
   dispatch: React.Dispatch<{ type: "TOGGLE_CHECKLIST_ITEM"; payload: { id: string } }>;
+  onEditEvent?: (id: string) => void;
 }) {
   const dateLabel = new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
@@ -1163,7 +1168,8 @@ function SelectedDatePanel({
           {(events as { id: string; title: string; category: string; startTime?: string; endTime?: string; notes: string; companyId: string | null }[]).map((ev) => {
             const tasks = ev.companyId ? checklist.filter((i) => i.companyId === ev.companyId) : [];
             return (
-              <div key={ev.id} className="rounded-lg bg-white p-3 border border-gray-100">
+              <div key={ev.id} onClick={() => onEditEvent?.(ev.id)}
+                className={`rounded-lg bg-white p-3 border border-gray-100 ${onEditEvent ? "cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors" : ""}`}>
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
                   <span className="text-sm font-medium text-gray-900">{ev.title}</span>
