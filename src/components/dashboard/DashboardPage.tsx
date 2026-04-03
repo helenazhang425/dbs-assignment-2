@@ -571,7 +571,41 @@ export default function DashboardPage() {
                             </svg>
                           </button>
                         </div>
-                        {evTasks.map(renderItem)}
+                        <DragDropContext onDragEnd={(result: DropResult) => {
+                          if (!result.destination) return;
+                          const items = [...evTasks];
+                          const [moved] = items.splice(result.source.index, 1);
+                          items.splice(result.destination.index, 0, moved);
+                          const otherItems = state.checklist.filter((i) => i.eventId !== sectionId);
+                          dispatch({ type: "REORDER_CHECKLIST", payload: { ids: [...otherItems.map((i) => i.id), ...items.map((i) => i.id)] } });
+                        }}>
+                          <Droppable droppableId={`company-${sectionId}`}>
+                            {(provided) => (
+                              <div ref={provided.innerRef} {...provided.droppableProps}>
+                                {evTasks.map((item, index) => (
+                                  <Draggable key={item.id} draggableId={item.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div ref={provided.innerRef} {...provided.draggableProps}
+                                        className={snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}>
+                                        <div className="flex items-center">
+                                          <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400">
+                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                              <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                                              <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                                              <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+                                            </svg>
+                                          </div>
+                                          <div className="flex-1">{renderItem(item)}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </DragDropContext>
                         <form className="flex items-center gap-3 rounded-lg px-3 py-1.5" onSubmit={(e) => {
                           e.preventDefault();
                           const input = (e.target as HTMLFormElement).elements.namedItem(`companyTask-${sectionId}`) as HTMLInputElement;

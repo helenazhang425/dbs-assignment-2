@@ -171,7 +171,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Mochi Health",
       role: "Operations Associate - Strategy",
-      notes: "Operations Associate - Strategy",
+      notes: "",
       createdAt: Date.now(),
     },
     // Sunday Apr 5
@@ -187,7 +187,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "",
       role: "",
-      notes: "Behavioral practice",
+      notes: "",
       createdAt: Date.now(),
     },
     // Monday Apr 6
@@ -203,7 +203,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Blink Health",
       role: "Manager, Network Strat and Partner Operations",
-      notes: "Manager, Network Strat and Partner Operations",
+      notes: "",
       createdAt: Date.now(),
     },
     {
@@ -218,7 +218,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Clover Health",
       role: "Special Projects Lead - Office of CEO",
-      notes: "Special Projects Lead - Office of CEO",
+      notes: "",
       createdAt: Date.now(),
     },
     {
@@ -233,7 +233,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "",
       role: "",
-      notes: "Case interview practice",
+      notes: "",
       createdAt: Date.now(),
     },
     // Friday Apr 10
@@ -249,7 +249,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "",
       role: "",
-      notes: "Behavioral mock interview",
+      notes: "",
       createdAt: Date.now(),
     },
     {
@@ -264,7 +264,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Sprinter Health",
       role: "Clinical Strat Manager",
-      notes: "Clinical Strat Manager",
+      notes: "",
       createdAt: Date.now(),
     },
     // Monday Apr 13
@@ -280,7 +280,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Granted",
       role: "Agent PM",
-      notes: "Agent PM",
+      notes: "",
       createdAt: Date.now(),
     },
   ],
