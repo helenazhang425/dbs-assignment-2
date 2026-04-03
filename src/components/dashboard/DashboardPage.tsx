@@ -244,15 +244,15 @@ export default function DashboardPage() {
 
   // Application stats — simplified into 3 buckets
   const totalApplications = state.applications.length;
-  const rejectedVerdicts = ["rejected without interview", "rejected - 1st round", "rejected - complete process"];
+  const rejectedVerdicts = ["rejected without interview", "rejected - interviewed"];
   const inProcessVerdicts = ["in process"];
   const appNoUpdate = state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length;
   const appRejected = state.applications.filter((a) => rejectedVerdicts.includes(a.verdict.toLowerCase())).length;
   const appInProcess = state.applications.filter((a) => inProcessVerdicts.includes(a.verdict.toLowerCase())).length;
   const appStatRows = [
-    { label: "No Update", count: appNoUpdate, color: "bg-amber-400" },
+    { label: "No Update", count: appNoUpdate, color: "bg-blue-400" },
     { label: "Rejected", count: appRejected, color: "bg-red-400" },
-    { label: "In Process", count: appInProcess, color: "bg-blue-500" },
+    { label: "In Process", count: appInProcess, color: "bg-amber-400" },
   ].filter((r) => r.count > 0);
 
   // Selected date events

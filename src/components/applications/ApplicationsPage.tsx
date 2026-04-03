@@ -9,10 +9,10 @@ type SortKey = "company" | "role" | "appliedDate" | "method" | "location" | "ver
 type SortDir = "asc" | "desc";
 
 const VERDICT_COLORS: Record<string, string> = {
-  "no update": "bg-amber-100 text-amber-700",
+  "no update": "bg-blue-50 text-blue-700",
+  "in process": "bg-amber-100 text-amber-700",
   "rejected without interview": "bg-red-50 text-red-600",
-  "rejected - 1st round": "bg-red-100 text-red-700",
-  "rejected - complete process": "bg-red-200 text-red-800",
+  "rejected - interviewed": "bg-red-100 text-red-700",
   "no opening": "bg-gray-100 text-gray-600",
   withdrew: "bg-purple-100 text-purple-700",
   offer: "bg-green-100 text-green-700",
@@ -24,10 +24,9 @@ function getVerdictClass(verdict: string) {
 
 const VERDICTS = [
   "No Update",
-  "Rejected without interview",
+  "In Process",
   "Rejected without Interview",
-  "Rejected - 1st Round",
-  "Rejected - Complete Process",
+  "Rejected - Interviewed",
   "No Opening",
   "Withdrew",
   "Offer",
