@@ -1,4 +1,4 @@
-import { AppState, Question, Company, ChecklistItem, Story } from "@/types";
+import { AppState, Question, Company, ChecklistItem, Story, PrepEvent, Application, SavedPosition } from "@/types";
 
 export type AppAction =
   // Questions
@@ -11,8 +11,9 @@ export type AppAction =
   | { type: "UPDATE_COMPANY"; payload: { id: string; updates: Partial<Company> } }
   | { type: "DELETE_COMPANY"; payload: { id: string } }
   // Checklist
-  | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string } }
+  | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null } }
   | { type: "TOGGLE_CHECKLIST_ITEM"; payload: { id: string } }
+  | { type: "UPDATE_CHECKLIST_ITEM"; payload: { id: string; updates: Partial<ChecklistItem> } }
   | { type: "DELETE_CHECKLIST_ITEM"; payload: { id: string } }
   | { type: "CLEAR_COMPLETED" }
   // Stories
@@ -21,7 +22,20 @@ export type AppAction =
   | { type: "DELETE_STORY"; payload: { id: string } }
   | { type: "ADD_FEEDBACK"; payload: { storyId: string; text: string } }
   | { type: "TOGGLE_FEEDBACK"; payload: { storyId: string; feedbackId: string } }
-  | { type: "DELETE_FEEDBACK"; payload: { storyId: string; feedbackId: string } };
+  | { type: "DELETE_FEEDBACK"; payload: { storyId: string; feedbackId: string } }
+  // Events
+  | { type: "ADD_EVENT"; payload: Omit<PrepEvent, "id" | "createdAt"> }
+  | { type: "UPDATE_EVENT"; payload: { id: string; updates: Partial<PrepEvent> } }
+  | { type: "DELETE_EVENT"; payload: { id: string } }
+  // Applications
+  | { type: "ADD_APPLICATION"; payload: Omit<Application, "id" | "createdAt"> }
+  | { type: "UPDATE_APPLICATION"; payload: { id: string; updates: Partial<Application> } }
+  | { type: "DELETE_APPLICATION"; payload: { id: string } }
+  // Saved Positions
+  | { type: "ADD_SAVED_POSITION"; payload: Omit<SavedPosition, "id" | "createdAt"> }
+  | { type: "UPDATE_SAVED_POSITION"; payload: { id: string; updates: Partial<SavedPosition> } }
+  | { type: "DELETE_SAVED_POSITION"; payload: { id: string } }
+  | { type: "CONVERT_TO_APPLICATION"; payload: { id: string } };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -95,6 +109,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             id: crypto.randomUUID(),
             text: action.payload.text,
             completed: false,
+            dueDate: action.payload.dueDate ?? "",
+            companyId: action.payload.companyId ?? null,
             createdAt: Date.now(),
           },
         ],
@@ -105,6 +121,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         checklist: state.checklist.map((item) =>
           item.id === action.payload.id
             ? { ...item, completed: !item.completed }
+            : item
+        ),
+      };
+    case "UPDATE_CHECKLIST_ITEM":
+      return {
+        ...state,
+        checklist: state.checklist.map((item) =>
+          item.id === action.payload.id
+            ? { ...item, ...action.payload.updates }
             : item
         ),
       };
@@ -199,6 +224,99 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             : s
         ),
       };
+
+    // Events
+    case "ADD_EVENT":
+      return {
+        ...state,
+        events: [
+          ...state.events,
+          {
+            ...action.payload,
+            id: crypto.randomUUID(),
+            createdAt: Date.now(),
+          },
+        ],
+      };
+    case "UPDATE_EVENT":
+      return {
+        ...state,
+        events: state.events.map((ev) =>
+          ev.id === action.payload.id ? { ...ev, ...action.payload.updates } : ev
+        ),
+      };
+    case "DELETE_EVENT":
+      return {
+        ...state,
+        events: state.events.filter((ev) => ev.id !== action.payload.id),
+      };
+
+    // Applications
+    case "ADD_APPLICATION":
+      return {
+        ...state,
+        applications: [
+          ...state.applications,
+          { ...action.payload, id: crypto.randomUUID(), createdAt: Date.now() },
+        ],
+      };
+    case "UPDATE_APPLICATION":
+      return {
+        ...state,
+        applications: state.applications.map((a) =>
+          a.id === action.payload.id ? { ...a, ...action.payload.updates } : a
+        ),
+      };
+    case "DELETE_APPLICATION":
+      return {
+        ...state,
+        applications: state.applications.filter((a) => a.id !== action.payload.id),
+      };
+
+    // Saved Positions
+    case "ADD_SAVED_POSITION":
+      return {
+        ...state,
+        savedPositions: [
+          ...state.savedPositions,
+          { ...action.payload, id: crypto.randomUUID(), createdAt: Date.now() },
+        ],
+      };
+    case "UPDATE_SAVED_POSITION":
+      return {
+        ...state,
+        savedPositions: state.savedPositions.map((sp) =>
+          sp.id === action.payload.id ? { ...sp, ...action.payload.updates } : sp
+        ),
+      };
+    case "DELETE_SAVED_POSITION":
+      return {
+        ...state,
+        savedPositions: state.savedPositions.filter((sp) => sp.id !== action.payload.id),
+      };
+    case "CONVERT_TO_APPLICATION": {
+      const pos = state.savedPositions.find((sp) => sp.id === action.payload.id);
+      if (!pos) return state;
+      return {
+        ...state,
+        savedPositions: state.savedPositions.filter((sp) => sp.id !== action.payload.id),
+        applications: [
+          ...state.applications,
+          {
+            id: crypto.randomUUID(),
+            company: pos.company,
+            role: pos.role,
+            appliedDate: new Date().toISOString().slice(0, 10),
+            method: "",
+            location: "",
+            verdict: "No Update",
+            notes: pos.notes,
+            spokeTo: "",
+            createdAt: Date.now(),
+          },
+        ],
+      };
+    }
 
     default:
       return state;
