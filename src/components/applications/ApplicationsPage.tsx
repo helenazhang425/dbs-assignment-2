@@ -239,62 +239,7 @@ export default function ApplicationsPage() {
       </div>
 
       {/* Summary donut */}
-      {(() => {
-        const total = state.applications.length;
-        const segments = [
-          { label: "No Update", count: state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length, color: "#60a5fa" },
-          { label: "In Process", count: state.applications.filter((a) => a.verdict.toLowerCase() === "in process").length, color: "#f59e0b" },
-          { label: "Rejected", count: state.applications.filter((a) => a.verdict.toLowerCase().includes("rejected")).length, color: "#ef4444" },
-          { label: "Withdrew", count: state.applications.filter((a) => a.verdict.toLowerCase() === "withdrew").length, color: "#a855f7" },
-          { label: "No Opening", count: state.applications.filter((a) => a.verdict.toLowerCase() === "no opening").length, color: "#9ca3af" },
-        ].filter((s) => s.count > 0);
-        const size = 120;
-        const stroke = 12;
-        const radius = (size - stroke) / 2;
-        const circumference = 2 * Math.PI * radius;
-        let offset = 0;
-        return (
-          <div className="mb-6 flex items-center gap-8">
-            <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-              <svg width={size} height={size} className="-rotate-90">
-                <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
-                {segments.map((s) => {
-                  const segLen = total > 0 ? (s.count / total) * circumference : 0;
-                  const segOffset = circumference - segLen;
-                  const rotation = (offset / circumference) * 360;
-                  offset += segLen;
-                  return (
-                    <circle key={s.label} cx={size/2} cy={size/2} r={radius} fill="none"
-                      stroke={s.color} strokeWidth={stroke}
-                      strokeDasharray={`${segLen} ${circumference - segLen}`}
-                      strokeDashoffset={0}
-                      transform={`rotate(${rotation} ${size/2} ${size/2})`}
-                      className="transition-all duration-500" />
-                  );
-                })}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-gray-900">{total}</span>
-                <span className="text-xs text-gray-400">total</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {segments.map((s) => {
-                const pct = total > 0 ? Math.round((s.count / total) * 100) : 0;
-                return (
-                  <div key={s.label} className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">{s.count} <span className="font-normal text-gray-400">({pct}%)</span></p>
-                      <p className="text-xs text-gray-500">{s.label}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      <ApplicationDonut applications={state.applications} />
 
       {/* Tabs */}
       <div className="mb-4 flex gap-1 border-b border-gray-200">
@@ -771,6 +716,73 @@ export default function ApplicationsPage() {
                 className="rounded-lg px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700">Delete</button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Application donut chart with hover
+function ApplicationDonut({ applications }: { applications: { verdict: string }[] }) {
+  const [hovered, setHovered] = useState<{ label: string; count: number; pct: number; color: string } | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const total = applications.length;
+  const segments = [
+    { label: "No Update", count: applications.filter((a) => a.verdict.toLowerCase() === "no update").length, color: "#60a5fa" },
+    { label: "In Process", count: applications.filter((a) => a.verdict.toLowerCase() === "in process").length, color: "#f59e0b" },
+    { label: "Rejected", count: applications.filter((a) => a.verdict.toLowerCase().includes("rejected")).length, color: "#ef4444" },
+    { label: "Withdrew", count: applications.filter((a) => a.verdict.toLowerCase() === "withdrew").length, color: "#a855f7" },
+    { label: "No Opening", count: applications.filter((a) => a.verdict.toLowerCase() === "no opening").length, color: "#9ca3af" },
+  ].filter((s) => s.count > 0);
+
+  const size = 120;
+  const stroke = 14;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="mb-6 flex items-center gap-6">
+      <div className="relative flex-shrink-0" style={{ width: size, height: size }}
+        onMouseLeave={() => setHovered(null)}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+          {segments.map((s) => {
+            const segLen = total > 0 ? (s.count / total) * circumference : 0;
+            const rotation = (offset / circumference) * 360;
+            offset += segLen;
+            const pct = total > 0 ? Math.round((s.count / total) * 100) : 0;
+            return (
+              <circle key={s.label} cx={size/2} cy={size/2} r={radius} fill="none"
+                stroke={s.color} strokeWidth={hovered?.label === s.label ? stroke + 4 : stroke}
+                strokeDasharray={`${segLen} ${circumference - segLen}`}
+                strokeDashoffset={0}
+                transform={`rotate(${rotation} ${size/2} ${size/2})`}
+                className="transition-all duration-200 cursor-pointer"
+                onMouseEnter={(e) => { setHovered({ ...s, pct }); setMousePos({ x: e.clientX, y: e.clientY }); }}
+                onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          {hovered ? (
+            <span className="text-xl font-bold" style={{ color: hovered.color }}>{hovered.count}</span>
+          ) : (
+            <span className="text-lg font-bold text-gray-300">&nbsp;</span>
+          )}
+        </div>
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-gray-900">{total}</p>
+        <p className="text-sm text-gray-500">total applications</p>
+      </div>
+      {/* Tooltip on mouse */}
+      {hovered && (
+        <div className="fixed z-50 pointer-events-none rounded-lg bg-gray-900 text-white px-3 py-1.5 text-xs shadow-lg"
+          style={{ left: mousePos.x + 12, top: mousePos.y - 10 }}>
+          <span className="font-medium">{hovered.label}</span> · {hovered.count} ({hovered.pct}%)
         </div>
       )}
     </div>
