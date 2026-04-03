@@ -275,25 +275,39 @@ export default function ApplicationsPage() {
                 <tr className="hover:bg-gray-50">
                   <td className="px-3 py-2.5" />
                   <td className="px-4 py-2.5">
-                    <form onSubmit={handleAddRow} className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <span className="text-gray-300 text-sm">+</span>
                       <input value={newCompany} onChange={(e) => setNewCompany(e.target.value)}
                         placeholder="Add application..."
+                        onKeyDown={(e) => { if (e.key === "Enter" && newCompany.trim()) { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
                         className="w-full text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
-                    </form>
+                    </div>
                   </td>
                   <td className="px-4 py-2.5">
                     {newCompany && <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Role"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
                       className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
                   <td className="px-4 py-2.5">
-                    {newCompany && <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
-                      className="text-sm text-gray-400 bg-transparent border-none focus:outline-none" />}
+                    {newCompany && <input type="text" value={newDate} onChange={(e) => setNewDate(e.target.value)} placeholder="Date"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
-                  <td className="px-4 py-2.5" />
-                  <td className="px-4 py-2.5" />
                   <td className="px-4 py-2.5">
-                    {newCompany && <button type="button" onClick={handleAddRow as unknown as () => void}
+                    {newCompany && <input value={newMethod} onChange={(e) => setNewMethod(e.target.value)} placeholder="Method"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newCompany && (
+                      <select value={newVerdict} onChange={(e) => setNewVerdict(e.target.value)}
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium border-none focus:outline-none ${getVerdictClass(newVerdict)}`}>
+                        {VERDICTS.map((v) => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newCompany && <button type="button" onClick={() => handleAddRow({ preventDefault: () => {} } as React.FormEvent)}
                       className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Add</button>}
                   </td>
                   <td />
