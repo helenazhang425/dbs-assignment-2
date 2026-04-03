@@ -475,6 +475,7 @@ export default function ApplicationsPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-32">Method</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Link</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Notes</th>
                   <th className="w-24" />
                   <th className="w-10" />
                 </tr>
@@ -503,6 +504,11 @@ export default function ApplicationsPage() {
                   </td>
                   <td className="px-4 py-2.5">
                     {newSavedCompany && <input value={newSavedUrl} onChange={(e) => setNewSavedUrl(e.target.value)} placeholder="URL"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newSavedCompany && <input value={newSavedNotes} onChange={(e) => setNewSavedNotes(e.target.value)} placeholder="Notes"
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
                       className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
@@ -560,6 +566,14 @@ export default function ApplicationsPage() {
                             {pos.url}
                           </a>
                         ) : <span onClick={() => startSavedEdit("url", "")} className="cursor-pointer text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {isEditing("notes") ? (
+                        <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
+                          className="w-full rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                      ) : (
+                        <span onClick={() => startSavedEdit("notes", pos.notes)} className="cursor-pointer text-sm text-gray-500 truncate block max-w-48">{pos.notes || "—"}</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
