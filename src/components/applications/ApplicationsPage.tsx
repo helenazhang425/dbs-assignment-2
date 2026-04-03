@@ -253,7 +253,7 @@ export default function ApplicationsPage() {
         const radius = (size - stroke) / 2;
         const circumference = 2 * Math.PI * radius;
         return (
-          <div className="mb-6 flex flex-wrap gap-4 justify-center sm:justify-start">
+          <div className="mb-6 grid grid-cols-3 gap-4 sm:grid-cols-6">
             {/* Total donut */}
             <div className="flex flex-col items-center">
               <div className="relative" style={{ width: size, height: size }}>
