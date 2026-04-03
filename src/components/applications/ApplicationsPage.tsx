@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 
 type Tab = "applied" | "saved";
 type SortKey = "company" | "role" | "appliedDate" | "method" | "location" | "verdict";
-type SortDir = "asc" | "desc";
+type SortDir = "asc" | "desc" | "none";
 
 const VERDICT_COLORS: Record<string, string> = {
   "no update": "bg-blue-50 text-blue-700",
@@ -36,14 +36,17 @@ export default function ApplicationsPage() {
   const { state, dispatch } = useApp();
   const [tab, setTab] = useState<Tab>("applied");
   const [search, setSearch] = useState("");
-  const [verdictFilter, setVerdictFilter] = useState<string>("all");
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [filterSearch, setFilterSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("appliedDate");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<SortDir>("none");
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [visibleCount, setVisibleCount] = useState(15);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // New application row
   const [newCompany, setNewCompany] = useState("");
@@ -71,24 +74,35 @@ export default function ApplicationsPage() {
       const q = search.toLowerCase();
       result = result.filter((a) => a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q));
     }
-    if (verdictFilter !== "all") {
-      result = result.filter((a) => a.verdict.toLowerCase() === verdictFilter.toLowerCase());
-    }
-    result = [...result].sort((a, b) => {
-      const aVal = a[sortKey] ?? "";
-      const bVal = b[sortKey] ?? "";
-      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      return sortDir === "asc" ? cmp : -cmp;
+    // Apply column filters
+    Object.entries(columnFilters).forEach(([key, value]) => {
+      if (value) {
+        result = result.filter((a) => (a as unknown as Record<string, string>)[key]?.toLowerCase() === value.toLowerCase());
+      }
     });
+    if (sortDir !== "none") {
+      result = [...result].sort((a, b) => {
+        const aVal = a[sortKey] ?? "";
+        const bVal = b[sortKey] ?? "";
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+    }
     return result;
-  }, [state.applications, search, verdictFilter, sortKey, sortDir]);
+  }, [state.applications, search, columnFilters, sortKey, sortDir]);
 
   const displayedApps = filtered.slice(0, visibleCount);
   const hasMore = filtered.length > visibleCount;
 
   function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else { setSortKey(key); setSortDir("asc"); }
+    if (sortKey === key) {
+      if (sortDir === "asc") setSortDir("desc");
+      else if (sortDir === "desc") setSortDir("none");
+      else setSortDir("asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
   }
 
   function startEdit(id: string, field: string, currentValue: string) {
@@ -168,7 +182,7 @@ export default function ApplicationsPage() {
   }
 
   const sortIcon = (key: SortKey) => {
-    if (sortKey !== key) return <span className="text-gray-300 ml-1">↕</span>;
+    if (sortKey !== key || sortDir === "none") return null;
     return <span className="text-indigo-500 ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
   };
 
@@ -222,18 +236,22 @@ export default function ApplicationsPage() {
               className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            <button onClick={() => setVerdictFilter("all")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${verdictFilter === "all" ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-500 opacity-60 hover:opacity-80"}`}>
-              All
-            </button>
-            {uniqueVerdicts.map((v) => (
-              <button key={v} onClick={() => setVerdictFilter(verdictFilter === v ? "all" : v)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${verdictFilter === v ? getVerdictClass(v) + " ring-2 ring-indigo-400" : getVerdictClass(v) + " opacity-60 hover:opacity-80"}`}>
-                {v}
-              </button>
-            ))}
-          </div>
+          {/* Active filters display */}
+          {Object.entries(columnFilters).filter(([, v]) => v).length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-400">Filters:</span>
+              {Object.entries(columnFilters).filter(([, v]) => v).map(([key, value]) => (
+                <button key={key} onClick={() => setColumnFilters((prev) => ({ ...prev, [key]: "" }))}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
+                  {value}
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+              <button onClick={() => setColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
+            </div>
+          )}
 
           {/* Bulk actions */}
           {selectedIds.size > 0 && (
@@ -265,9 +283,49 @@ export default function ApplicationsPage() {
                       className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                   </th>
                   {columns.map((col) => (
-                    <th key={col.key} onClick={() => handleSort(col.key)}
-                      className={`${col.width} cursor-pointer select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700`}>
-                      {col.label}{sortIcon(col.key)}
+                    <th key={col.key}
+                      className={`${col.width} select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 relative`}>
+                      <div className="flex items-center gap-1">
+                        <span className="cursor-pointer hover:text-gray-700" onClick={() => handleSort(col.key)}>
+                          {col.label}{sortIcon(col.key)}
+                        </span>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveFilter(activeFilter === col.key ? null : col.key); }}
+                          className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${columnFilters[col.key] ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                          </svg>
+                        </button>
+                      </div>
+                      {activeFilter === col.key && (() => {
+                        const allValues = Array.from(new Set(state.applications.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean))).sort();
+                        const fq = filterSearch.toLowerCase();
+                        const filteredValues = fq ? allValues.filter((v) => v.toLowerCase().includes(fq)) : allValues;
+                        return (
+                        <div className="absolute z-20 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg"
+                          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setTimeout(() => { setActiveFilter(null); setFilterSearch(""); }, 150); }}>
+                          <div className="p-1.5">
+                            <input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} autoFocus
+                              placeholder="Search..."
+                              className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto px-1 pb-1">
+                            {filteredValues.map((val) => (
+                              <button key={val} onClick={() => {
+                                const newVal = columnFilters[col.key] === val ? "" : val;
+                                setColumnFilters((prev) => ({ ...prev, [col.key]: newVal }));
+                                setActiveFilter(null); setFilterSearch("");
+                              }}
+                                className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
+                                  col.key === "verdict" ? getVerdictClass(val) : columnFilters[col.key] === val ? "text-indigo-600 font-medium" : "text-gray-600"
+                                }`}>
+                                {col.key === "verdict" ? (
+                                  <span className={`inline-flex rounded-full px-2 py-0.5 ${getVerdictClass(val)}`}>{val}</span>
+                                ) : val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>);
+                      })()}
                     </th>
                   ))}
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Notes</th>
@@ -301,12 +359,9 @@ export default function ApplicationsPage() {
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
                       className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 relative">
                     {newCompany && (
-                      <select value={newVerdict} onChange={(e) => setNewVerdict(e.target.value)}
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium border-none focus:outline-none ${getVerdictClass(newVerdict)}`}>
-                        {VERDICTS.map((v) => <option key={v} value={v}>{v}</option>)}
-                      </select>
+                      <VerdictDropdown value={newVerdict} onChange={setNewVerdict} />
                     )}
                   </td>
                   <td className="px-4 py-2.5">
@@ -359,28 +414,10 @@ export default function ApplicationsPage() {
                         <span onClick={() => startEdit(app.id, "method", app.method)} className="cursor-pointer">{app.method || "—"}</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5">
-                      {editingCell?.id === app.id && editingCell.field === "verdict" ? (
-                        <div className="flex flex-wrap gap-1">
-                          {VERDICTS.map((v) => (
-                            <button key={v}
-                              onClick={() => {
-                                dispatch({ type: "UPDATE_APPLICATION", payload: { id: app.id, updates: { verdict: v } } });
-                                setEditingCell(null);
-                              }}
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
-                                editValue === v ? getVerdictClass(v) + " ring-2 ring-indigo-400" : getVerdictClass(v) + " opacity-50 hover:opacity-80"
-                              }`}>
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <span onClick={() => startEdit(app.id, "verdict", app.verdict)}
-                          className={`cursor-pointer inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(app.verdict)}`}>
-                          {app.verdict}
-                        </span>
-                      )}
+                    <td className="px-4 py-2.5 relative">
+                      <VerdictDropdown value={app.verdict} onChange={(v) => {
+                        dispatch({ type: "UPDATE_APPLICATION", payload: { id: app.id, updates: { verdict: v } } });
+                      }} />
                     </td>
                     <td className="px-4 py-2.5 text-gray-500 text-xs">
                       {editingCell?.id === app.id && editingCell.field === "notes" ? (
@@ -391,7 +428,7 @@ export default function ApplicationsPage() {
                       )}
                     </td>
                     <td className="px-2 py-2.5">
-                      <button onClick={() => dispatch({ type: "DELETE_APPLICATION", payload: { id: app.id } })}
+                      <button onClick={() => setDeleteConfirmId(app.id)}
                         className="invisible group-hover:visible text-gray-300 hover:text-red-500">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -479,6 +516,49 @@ export default function ApplicationsPage() {
             </form>
           )}
         </>
+      )}
+      {/* Delete confirmation */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative rounded-xl bg-white p-6 shadow-xl max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900">Delete application?</h3>
+            <p className="mt-2 text-sm text-gray-500">This action cannot be undone.</p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setDeleteConfirmId(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { dispatch({ type: "DELETE_APPLICATION", payload: { id: deleteConfirmId } }); setDeleteConfirmId(null); }}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Notion-style verdict dropdown
+function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer ${getVerdictClass(value)}`}>
+        {value}
+        <svg className="ml-1 h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5"
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setTimeout(() => setOpen(false), 150); }}>
+          {VERDICTS.map((v) => (
+            <button key={v} onClick={() => { onChange(v); setOpen(false); }}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === v ? "bg-gray-50" : ""}`}>
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(v)}`}>{v}</span>
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
