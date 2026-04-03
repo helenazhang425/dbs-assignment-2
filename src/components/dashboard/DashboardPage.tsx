@@ -508,7 +508,12 @@ export default function DashboardPage() {
 
                 {/* Search to add a new prep section */}
                 {showPrepSearch && (
-                  <div className="px-3 pt-2 relative">
+                  <div className="px-3 pt-2 relative"
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setTimeout(() => setShowPrepSearch(false), 150);
+                      }
+                    }}>
                     <input
                       value={prepSearchQuery}
                       onChange={(e) => setPrepSearchQuery(e.target.value)}
@@ -648,57 +653,38 @@ export default function DashboardPage() {
                   </svg>
                   {displayTz.split("/").pop()?.replace(/_/g, " ")}
                 </button>
-                {showTzPicker && (
-                  <div className="absolute z-20 mt-1 left-0 w-56 rounded-lg border border-gray-200 bg-white shadow-lg p-2">
-                    <input value={tzSearch} onChange={(e) => setTzSearch(e.target.value)} autoFocus
-                      placeholder="Search city..."
-                      className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none mb-1" />
-                    <div className="max-h-40 overflow-y-auto">
-                      {(() => {
-                        const cities: Record<string, string> = {
-                          "Chicago": "America/Chicago",
-                          "New York": "America/New_York",
-                          "Los Angeles": "America/Los_Angeles",
-                          "San Francisco": "America/Los_Angeles",
-                          "Denver": "America/Denver",
-                          "Phoenix": "America/Phoenix",
-                          "Anchorage": "America/Anchorage",
-                          "Honolulu": "Pacific/Honolulu",
-                          "London": "Europe/London",
-                          "Paris": "Europe/Paris",
-                          "Berlin": "Europe/Berlin",
-                          "Tokyo": "Asia/Tokyo",
-                          "Shanghai": "Asia/Shanghai",
-                          "Beijing": "Asia/Shanghai",
-                          "Mumbai": "Asia/Kolkata",
-                          "Dubai": "Asia/Dubai",
-                          "Sydney": "Australia/Sydney",
-                          "Toronto": "America/Toronto",
-                          "Vancouver": "America/Vancouver",
-                          "Seattle": "America/Los_Angeles",
-                          "Boston": "America/New_York",
-                          "Austin": "America/Chicago",
-                          "Dallas": "America/Chicago",
-                          "Houston": "America/Chicago",
-                          "Atlanta": "America/New_York",
-                          "Miami": "America/New_York",
-                          "Detroit": "America/Detroit",
-                          "Minneapolis": "America/Chicago",
-                        };
-                        const q = tzSearch.toLowerCase();
-                        const matches = Object.entries(cities).filter(([city]) => city.toLowerCase().includes(q));
-                        return matches.length > 0 ? matches.map(([city, tz]) => (
-                          <button key={city} onClick={() => { setDisplayTz(tz); setShowTzPicker(false); }}
-                            className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-indigo-50 ${displayTz === tz ? "text-indigo-600 font-medium" : "text-gray-600"}`}>
-                            {city} <span className="text-gray-400">({tz.split("/").pop()?.replace(/_/g, " ")})</span>
-                          </button>
-                        )) : (
-                          <p className="px-2 py-1.5 text-xs text-gray-400">No matches</p>
-                        );
-                      })()}
+                {showTzPicker && (() => {
+                  const cities: Record<string, string> = {
+                    "Chicago": "America/Chicago", "New York": "America/New_York", "Los Angeles": "America/Los_Angeles",
+                    "San Francisco": "America/Los_Angeles", "Denver": "America/Denver", "Phoenix": "America/Phoenix",
+                    "Honolulu": "Pacific/Honolulu", "London": "Europe/London", "Paris": "Europe/Paris",
+                    "Tokyo": "Asia/Tokyo", "Shanghai": "Asia/Shanghai", "Mumbai": "Asia/Kolkata",
+                    "Dubai": "Asia/Dubai", "Sydney": "Australia/Sydney", "Toronto": "America/Toronto",
+                    "Seattle": "America/Los_Angeles", "Boston": "America/New_York", "Austin": "America/Chicago",
+                    "Dallas": "America/Chicago", "Atlanta": "America/New_York", "Miami": "America/New_York",
+                    "Detroit": "America/Detroit", "Minneapolis": "America/Chicago", "Houston": "America/Chicago",
+                  };
+                  const q = tzSearch.toLowerCase();
+                  const matches = q ? Object.entries(cities).filter(([city]) => city.toLowerCase().includes(q)).slice(0, 5) : [];
+                  return (
+                    <div className="absolute z-20 mt-1 left-0 w-48 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5"
+                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setTimeout(() => setShowTzPicker(false), 150); }}>
+                      <input value={tzSearch} onChange={(e) => setTzSearch(e.target.value)} autoFocus
+                        placeholder="Type a city..."
+                        className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
+                      {matches.length > 0 && (
+                        <div className="mt-1">
+                          {matches.map(([city, tz]) => (
+                            <button key={city} onClick={() => { setDisplayTz(tz); setShowTzPicker(false); }}
+                              className="block w-full px-2 py-1 text-left text-xs text-gray-600 rounded hover:bg-indigo-50">
+                              {city}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
             <div className="flex items-center gap-2">
