@@ -17,13 +17,17 @@ export default function DashboardPage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [companySearch, setCompanySearch] = useState("");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Event form state
-  const [eventCompanyId, setEventCompanyId] = useState<string>("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventCompanySearch, setEventCompanySearch] = useState("");
+  const [eventCompanyName, setEventCompanyName] = useState("");
+  const [eventRole, setEventRole] = useState("");
   const [eventCategory, setEventCategory] = useState<EventCategory>("interview");
-  const [eventInterviewType, setEventInterviewType] = useState<InterviewType>("recruiter-screen");
-  const [eventStage, setEventStage] = useState<InterviewStage>("recruiter");
+  const [eventInterviewType, setEventInterviewType] = useState<InterviewType | null>(null);
+  const [eventStage, setEventStage] = useState<InterviewStage | null>(null);
   const [eventDate, setEventDate] = useState("");
   const [eventStartTime, setEventStartTime] = useState("");
   const [eventEndTime, setEventEndTime] = useState("");
@@ -113,14 +117,13 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!eventDate) return;
 
-    const company = state.companies.find((c) => c.id === eventCompanyId);
-    let title = "";
-    if (eventCategory === "interview" && company) {
-      title = `${company.name} — ${stageLabels[eventStage]}`;
-    } else if (eventCategory === "practice") {
-      title = eventNotes.trim() || "Practice session";
-    } else {
-      title = eventNotes.trim() || "Event";
+    let title = eventTitle.trim();
+    if (!title) {
+      if (eventCategory === "interview" && eventCompanyName) {
+        title = eventRole ? `${eventCompanyName} — ${eventRole}` : eventCompanyName;
+      } else {
+        title = eventNotes.trim() || "Event";
+      }
     }
 
     dispatch({
@@ -131,21 +134,30 @@ export default function DashboardPage() {
         startTime: eventStartTime,
         endTime: eventEndTime,
         category: eventCategory,
-        interviewType: eventCategory === "interview" ? eventInterviewType : null,
+        interviewType: eventInterviewType,
         interviewStage: eventCategory === "interview" ? eventStage : null,
-        companyId: eventCategory === "interview" ? (eventCompanyId || null) : null,
+        companyId: null,
+        companyName: eventCompanyName,
+        role: eventRole,
         notes: eventNotes.trim(),
       },
     });
-    setEventCompanyId("");
+    resetEventForm();
+    setShowAddEvent(false);
+  }
+
+  function resetEventForm() {
+    setEventTitle("");
+    setEventCompanySearch("");
+    setEventCompanyName("");
+    setEventRole("");
     setEventCategory("interview");
-    setEventInterviewType("recruiter-screen");
-    setEventStage("recruiter");
+    setEventInterviewType(null);
+    setEventStage(null);
     setEventDate("");
     setEventStartTime("");
     setEventEndTime("");
     setEventNotes("");
-    setShowAddEvent(false);
   }
 
   // ---- Calendar helpers ----
@@ -394,43 +406,210 @@ export default function DashboardPage() {
             const practiceEvents = upcomingEvents.filter((ev) => ev.category === "practice");
             const interviewEvents = upcomingEvents.filter((ev) => ev.category === "interview");
 
-            const typeLabel = (ev: typeof upcomingEvents[0]) => {
-              if (ev.category === "practice" && ev.interviewType) {
-                return ev.interviewType === "case" ? "Case" : ev.interviewType === "behavioral" ? "Behavioral" : null;
-              }
-              return null;
+            const typeBadge = (ev: typeof upcomingEvents[0]) => {
+              if (!ev.interviewType) return null;
+              const config: Record<string, { label: string; cls: string }> = {
+                behavioral: { label: "Behavioral", cls: "bg-blue-50 text-blue-600" },
+                case: { label: "Case", cls: "bg-purple-50 text-purple-600" },
+                "recruiter-screen": { label: "Recruiter Screen", cls: "bg-teal-50 text-teal-700" },
+                presentation: { label: "Presentation", cls: "bg-orange-50 text-orange-600" },
+                mixed: { label: "Mixed", cls: "bg-pink-50 text-pink-600" },
+                other: { label: "Other", cls: "bg-gray-100 text-gray-500" },
+              };
+              return config[ev.interviewType] ?? null;
+            };
+
+            const dotColor = (cat: string) => {
+              if (cat === "interview") return "bg-indigo-500";
+              if (cat === "practice") return "bg-green-500";
+              if (cat === "networking") return "bg-amber-500";
+              return "bg-gray-400";
             };
 
             const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
               const eventTasks = ev.companyId ? state.checklist.filter((i) => i.companyId === ev.companyId) : [];
               const tasksDone = eventTasks.filter((i) => i.completed).length;
-              const badge = typeLabel(ev);
+              const badge = typeBadge(ev);
               const isEditing = editingEventId === ev.id;
 
               if (isEditing) {
+                const rolesForCompany = ev.companyName
+                  ? Array.from(new Set(state.applications.filter((a) => a.company === ev.companyName).map((a) => a.role)))
+                  : [];
+                const searchQ = companySearch.toLowerCase();
+                const matchedCompanies = searchQ
+                  ? Array.from(new Set(state.applications.map((a) => a.company))).filter((c) => c.toLowerCase().includes(searchQ)).slice(0, 8)
+                  : [];
+
+                const categoryOptions = [
+                  { value: "interview", label: "Interview", bg: "bg-indigo-100 text-indigo-700", active: "bg-indigo-600 text-white" },
+                  { value: "practice", label: "Practice", bg: "bg-green-100 text-green-700", active: "bg-green-600 text-white" },
+                  { value: "networking", label: "Networking", bg: "bg-amber-100 text-amber-700", active: "bg-amber-500 text-white" },
+                  { value: "other", label: "Other", bg: "bg-gray-100 text-gray-600", active: "bg-gray-500 text-white" },
+                ];
+
+                // Type options depend on category
+                const practiceTypes = [
+                  { value: "behavioral", label: "Behavioral", bg: "bg-blue-50 text-blue-600", active: "bg-blue-500 text-white" },
+                  { value: "case", label: "Case", bg: "bg-purple-50 text-purple-600", active: "bg-purple-500 text-white" },
+                  { value: "other", label: "Other", bg: "bg-gray-100 text-gray-500", active: "bg-gray-500 text-white" },
+                ];
+                const interviewTypes = [
+                  { value: "behavioral", label: "Behavioral", bg: "bg-blue-50 text-blue-600", active: "bg-blue-500 text-white" },
+                  { value: "case", label: "Case", bg: "bg-purple-50 text-purple-600", active: "bg-purple-500 text-white" },
+                  { value: "recruiter-screen", label: "Recruiter Screen", bg: "bg-teal-50 text-teal-600", active: "bg-teal-500 text-white" },
+                  { value: "presentation", label: "Presentation", bg: "bg-orange-50 text-orange-600", active: "bg-orange-500 text-white" },
+                  { value: "mixed", label: "Mixed", bg: "bg-pink-50 text-pink-600", active: "bg-pink-500 text-white" },
+                  { value: "other", label: "Other", bg: "bg-gray-100 text-gray-500", active: "bg-gray-500 text-white" },
+                ];
+                const currentTypeOptions = ev.category === "practice" ? practiceTypes
+                  : ev.category === "networking" || ev.category === "other" ? []
+                  : interviewTypes;
+
+                const stageOptions = [
+                  { value: "recruiter", label: "Recruiter Screen" },
+                  { value: "round-1", label: "Round 1" },
+                  { value: "round-2", label: "Round 2" },
+                  { value: "round-3", label: "Round 3" },
+                  { value: "final", label: "Final Round" },
+                  { value: "other", label: "Other" },
+                ];
+
+                // Auto-generate title from role + company
+                function autoTitle(companyName: string, role: string) {
+                  if (companyName && role) return `${companyName} — ${role}`;
+                  if (companyName) return companyName;
+                  return ev.title;
+                }
+
                 return (
-                  <div key={ev.id} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-2">
+                  <div key={ev.id} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3">
+                    {/* Title (auto-generated: role + company) */}
                     <input defaultValue={ev.title}
                       onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { title: e.target.value } } })}
                       className="w-full rounded border border-gray-200 px-2 py-1 text-sm font-medium focus:border-indigo-400 focus:outline-none" />
-                    <div className="grid grid-cols-3 gap-2">
-                      <input type="date" defaultValue={ev.date}
-                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { date: e.target.value } } })}
-                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
-                      <input type="time" defaultValue={ev.startTime}
-                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { startTime: e.target.value } } })}
-                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
-                      <input type="time" defaultValue={ev.endTime}
-                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { endTime: e.target.value } } })}
-                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+
+                    {/* Category pills */}
+                    <div>
+                      <p className="mb-1 text-xs text-gray-400">Category</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {categoryOptions.map((opt) => (
+                          <button key={opt.value}
+                            onClick={() => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { category: opt.value as EventCategory, interviewType: opt.value === "networking" ? null : ev.interviewType } } })}
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.category === opt.value ? opt.active : opt.bg + " hover:opacity-80"}`}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <input defaultValue={ev.notes} placeholder="Notes"
-                      onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { notes: e.target.value } } })}
-                      className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+
+                    {/* Type pills (conditional on category) */}
+                    {currentTypeOptions.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs text-gray-400">Type</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentTypeOptions.map((opt) => (
+                            <button key={opt.value}
+                              onClick={() => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { interviewType: ev.interviewType === opt.value ? null : opt.value as InterviewType } } })}
+                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.interviewType === opt.value ? opt.active : opt.bg + " hover:opacity-80"}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Company search + Role + Stage (interviews only) */}
+                    {ev.category === "interview" && (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <p className="mb-1 text-xs text-gray-400">Company</p>
+                          <input
+                            value={companySearch !== "" ? companySearch : (ev.companyName || "")}
+                            onChange={(e) => {
+                              setCompanySearch(e.target.value);
+                              if (!e.target.value) {
+                                dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { companyName: "", role: "", title: ev.title } } });
+                              }
+                            }}
+                            onFocus={() => { if (!companySearch) setCompanySearch(ev.companyName || ""); }}
+                            placeholder="Search company..."
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                          {searchQ && matchedCompanies.length > 0 && (
+                            <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-40 overflow-y-auto">
+                              {matchedCompanies.map((c) => (
+                                <button key={c}
+                                  onClick={() => {
+                                    const firstRole = state.applications.find((a) => a.company === c)?.role ?? "";
+                                    dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { companyName: c, role: firstRole, title: autoTitle(c, firstRole) } } });
+                                    setCompanySearch("");
+                                  }}
+                                  className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-indigo-50">
+                                  {c}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="mb-1 text-xs text-gray-400">Role</p>
+                            <select value={ev.role || ""}
+                              onChange={(e) => {
+                                const role = e.target.value;
+                                dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { role, title: autoTitle(ev.companyName, role) } } });
+                              }}
+                              className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none">
+                              <option value="">Role...</option>
+                              {rolesForCompany.map((r) => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <p className="mb-1 text-xs text-gray-400">Stage</p>
+                            <select value={ev.interviewStage || ""}
+                              onChange={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { interviewStage: (e.target.value || null) as InterviewStage | null } } })}
+                              className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none">
+                              <option value="">Stage...</option>
+                              {stageOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date + Times */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="mb-1 text-xs text-gray-400">Date</p>
+                        <input type="date" defaultValue={ev.date}
+                          onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { date: e.target.value } } })}
+                          className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-gray-400">Start</p>
+                        <input type="time" defaultValue={ev.startTime}
+                          onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { startTime: e.target.value } } })}
+                          className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-gray-400">End</p>
+                        <input type="time" defaultValue={ev.endTime}
+                          onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { endTime: e.target.value } } })}
+                          className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-xs text-gray-400">Notes</p>
+                      <input defaultValue={ev.notes} placeholder="Notes"
+                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { notes: e.target.value } } })}
+                        className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                    </div>
+
                     <div className="flex items-center justify-between pt-1">
                       <button onClick={() => { dispatch({ type: "DELETE_EVENT", payload: { id: ev.id } }); setEditingEventId(null); }}
                         className="text-xs text-red-500 hover:text-red-700">Delete</button>
-                      <button onClick={() => setEditingEventId(null)}
+                      <button onClick={() => { setEditingEventId(null); setCompanySearch(""); }}
                         className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Done</button>
                     </div>
                   </div>
@@ -442,15 +621,13 @@ export default function DashboardPage() {
                   className="cursor-pointer rounded-lg border border-gray-100 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors">
                   <div className="flex items-start gap-2">
                     {showDot && (
-                      <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
+                      <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${dotColor(ev.category)}`} />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-gray-900">{ev.title}</p>
                         {badge && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            badge === "Case" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
-                          }`}>{badge}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>{badge.label}</span>
                         )}
                       </div>
                       {ev.startTime && (
@@ -598,9 +775,12 @@ export default function DashboardPage() {
                         {dayEvents.map((ev) => (
                           <div
                             key={ev.id}
-                            className={`rounded px-1.5 py-0.5 text-xs truncate ${
+                            onClick={(e) => { e.stopPropagation(); setEditingEventId(ev.id); }}
+                            className={`cursor-pointer rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 ${
                               ev.category === "interview"
                                 ? "bg-indigo-100 text-indigo-700"
+                                : ev.category === "networking"
+                                ? "bg-amber-100 text-amber-700"
                                 : "bg-green-100 text-green-700"
                             }`}
                           >
@@ -613,8 +793,13 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
+              {/* Edit form for week view */}
+              {editingEventId && (() => {
+                const editEv = upcomingEvents.find((e) => e.id === editingEventId);
+                return editEv ? <div className="mt-4">{renderEvent(editEv)}</div> : null;
+              })()}
               {/* Selected date detail */}
-              {selectedDate && (
+              {!editingEventId && selectedDate && (
                 <SelectedDatePanel
                   dateStr={selectedDate}
                   events={getEventsForDateStr(selectedDate)}
@@ -692,8 +877,13 @@ export default function DashboardPage() {
                 <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-indigo-400" /> Interview</span>
                 <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-green-400" /> Practice</span>
               </div>
+              {/* Edit form for month view */}
+              {editingEventId && (() => {
+                const editEv = state.events.find((e) => e.id === editingEventId);
+                return editEv ? <div className="mt-4">{renderEvent(editEv)}</div> : null;
+              })()}
               {/* Selected date detail */}
-              {selectedDate && (
+              {!editingEventId && selectedDate && (
                 <SelectedDatePanel
                   dateStr={selectedDate}
                   events={getEventsForDateStr(selectedDate)}
@@ -707,63 +897,115 @@ export default function DashboardPage() {
       </div>
 
       {/* Add Event Modal */}
-      <Modal open={showAddEvent} onClose={() => setShowAddEvent(false)} title="Add Event">
-        <form onSubmit={handleAddEvent} className="space-y-4">
-          {/* Category toggle */}
+      <Modal open={showAddEvent} onClose={() => { setShowAddEvent(false); resetEventForm(); }} title="Add Event">
+        <form onSubmit={handleAddEvent} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {/* Category pills */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Type</label>
-            <div className="flex rounded-lg border border-gray-200">
-              <button type="button"
-                onClick={() => setEventCategory("interview")}
-                className={`flex-1 rounded-l-lg px-4 py-2 text-sm font-medium ${
-                  eventCategory === "interview" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"
-                }`}
-              >Interview</button>
-              <button type="button"
-                onClick={() => setEventCategory("practice")}
-                className={`flex-1 rounded-r-lg px-4 py-2 text-sm font-medium ${
-                  eventCategory === "practice" ? "bg-green-600 text-white" : "text-gray-500 hover:bg-gray-50"
-                }`}
-              >Practice</button>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
+            <div className="flex gap-2">
+              {([
+                { value: "interview", label: "Interview", active: "bg-indigo-600 text-white", inactive: "bg-indigo-100 text-indigo-700" },
+                { value: "practice", label: "Practice", active: "bg-green-600 text-white", inactive: "bg-green-100 text-green-700" },
+                { value: "networking", label: "Networking", active: "bg-amber-500 text-white", inactive: "bg-amber-100 text-amber-700" },
+              ] as const).map((opt) => (
+                <button key={opt.value} type="button"
+                  onClick={() => setEventCategory(opt.value)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${eventCategory === opt.value ? opt.active : opt.inactive + " hover:opacity-80"}`}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Company (interview only) */}
-          {eventCategory === "interview" && (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Company</label>
-              <select value={eventCompanyId} onChange={(e) => setEventCompanyId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                <option value="">Select a company...</option>
-                {state.companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} — {c.role}</option>
-                ))}
-              </select>
+          {/* Title */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder={eventCategory === "interview" ? "Auto-generated from company + role" : "e.g. Mock interview with Sarah"} />
+          </div>
+
+          {/* Type pills (conditional on category, consistent with edit form) */}
+          {eventCategory !== "networking" && eventCategory !== "other" && (
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Type</label>
+            <div className="flex flex-wrap gap-2">
+              {(eventCategory === "practice" ? [
+                { value: "behavioral", label: "Behavioral", active: "bg-blue-500 text-white", inactive: "bg-blue-50 text-blue-600" },
+                { value: "case", label: "Case", active: "bg-purple-500 text-white", inactive: "bg-purple-50 text-purple-600" },
+                { value: "other", label: "Other", active: "bg-gray-500 text-white", inactive: "bg-gray-100 text-gray-500" },
+              ] : [
+                { value: "behavioral", label: "Behavioral", active: "bg-blue-500 text-white", inactive: "bg-blue-50 text-blue-600" },
+                { value: "case", label: "Case", active: "bg-purple-500 text-white", inactive: "bg-purple-50 text-purple-600" },
+                { value: "recruiter-screen", label: "Recruiter Screen", active: "bg-teal-500 text-white", inactive: "bg-teal-50 text-teal-600" },
+                { value: "presentation", label: "Presentation", active: "bg-orange-500 text-white", inactive: "bg-orange-50 text-orange-600" },
+                { value: "mixed", label: "Mixed", active: "bg-pink-500 text-white", inactive: "bg-pink-50 text-pink-600" },
+                { value: "other", label: "Other", active: "bg-gray-500 text-white", inactive: "bg-gray-100 text-gray-500" },
+              ] as { value: string; label: string; active: string; inactive: string }[]).map((opt) => (
+                <button key={opt.value} type="button"
+                  onClick={() => setEventInterviewType(eventInterviewType === opt.value ? null : opt.value as InterviewType)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${eventInterviewType === opt.value ? opt.active : opt.inactive + " hover:opacity-80"}`}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
+          </div>
           )}
 
-          {/* Interview type + stage (interview only) */}
+          {/* Interview-specific: Company search + Role + Stage */}
           {eventCategory === "interview" && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
-                <select value={eventInterviewType} onChange={(e) => setEventInterviewType(e.target.value as InterviewType)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                  {Object.entries(interviewTypeLabels).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
+            <>
+              <div className="relative">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Company</label>
+                <input type="text" value={eventCompanySearch || eventCompanyName}
+                  onChange={(e) => { setEventCompanySearch(e.target.value); setEventCompanyName(""); setEventRole(""); }}
+                  placeholder="Search from applications..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                {eventCompanySearch && (() => {
+                  const q = eventCompanySearch.toLowerCase();
+                  const matches = Array.from(new Set(state.applications.map((a) => a.company)))
+                    .filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
+                  return matches.length > 0 ? (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-40 overflow-y-auto">
+                      {matches.map((c) => (
+                        <button key={c} type="button"
+                          onClick={() => {
+                            setEventCompanyName(c);
+                            setEventCompanySearch("");
+                            const firstRole = state.applications.find((a) => a.company === c)?.role ?? "";
+                            setEventRole(firstRole);
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50">
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Stage</label>
-                <select value={eventStage} onChange={(e) => setEventStage(e.target.value as InterviewStage)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                  {Object.entries(stageLabels).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                  <select value={eventRole} onChange={(e) => setEventRole(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <option value="">Select role...</option>
+                    {eventCompanyName && Array.from(new Set(state.applications.filter((a) => a.company === eventCompanyName).map((a) => a.role))).map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Stage</label>
+                  <select value={eventStage ?? ""} onChange={(e) => setEventStage((e.target.value || null) as InterviewStage | null)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <option value="">Select stage...</option>
+                    {Object.entries(stageLabels).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Date + Time */}
@@ -787,16 +1029,14 @@ export default function DashboardPage() {
 
           {/* Notes */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {eventCategory === "practice" ? "Details" : "Notes (optional)"}
-            </label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
             <textarea value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} rows={2}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder={eventCategory === "practice" ? "e.g. Mock interview with Sarah" : "Any details..."} />
+              placeholder="Any details..." />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowAddEvent(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => { setShowAddEvent(false); resetEventForm(); }}>Cancel</Button>
             <Button type="submit">Add Event</Button>
           </div>
         </form>
@@ -837,7 +1077,7 @@ function SelectedDatePanel({
                   <span className="text-sm font-medium text-gray-900">{ev.title}</span>
                   <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
                     ev.category === "interview" ? "bg-indigo-100 text-indigo-700" : "bg-green-100 text-green-700"
-                  }`}>{ev.category}</span>
+                  }`}>{ev.category === "interview" ? "Interview" : "Practice"}</span>
                 </div>
                 {ev.startTime && (
                   <p className="mt-1 ml-4 text-xs text-gray-500">

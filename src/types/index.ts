@@ -67,21 +67,23 @@ export interface Story {
   updatedAt: number;
 }
 
-export type EventCategory = "interview" | "practice";
+export type EventCategory = "interview" | "practice" | "networking" | "other";
 
-export type InterviewType = "recruiter-screen" | "case" | "behavioral" | "technical" | "system-design" | "presentation" | "other";
+export type InterviewType = "recruiter-screen" | "case" | "behavioral" | "technical" | "system-design" | "presentation" | "mixed" | "other";
 export type InterviewStage = "recruiter" | "round-1" | "round-2" | "round-3" | "final" | "other";
 
 export interface PrepEvent {
   id: string;
   title: string;
-  date: string; // ISO date string
-  startTime: string; // "HH:MM" or ""
-  endTime: string; // "HH:MM" or ""
+  date: string;
+  startTime: string;
+  endTime: string;
   category: EventCategory;
   interviewType: InterviewType | null;
   interviewStage: InterviewStage | null;
   companyId: string | null;
+  companyName: string;
+  role: string;
   notes: string;
   createdAt: number;
 }
