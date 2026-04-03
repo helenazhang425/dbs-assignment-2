@@ -26,7 +26,7 @@ const VERDICTS = [
   "No Update",
   "In Process",
   "Rejected without Interview",
-  "Rejected - Interviewed",
+  "Rejected - interviewed",
   "No Opening",
   "Withdrew",
   "Offer",
@@ -40,7 +40,7 @@ export default function ApplicationsPage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterSearch, setFilterSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("appliedDate");
-  const [sortDir, setSortDir] = useState<SortDir>("none");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [visibleCount, setVisibleCount] = useState(15);
@@ -543,7 +543,7 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)}
-        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer ${getVerdictClass(value)}`}>
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left ${getVerdictClass(value)}`}>
         {value}
         <svg className="ml-1 h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
