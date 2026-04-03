@@ -167,7 +167,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Tandem",
       role: "S&O Lead",
-      questionsAsked: [],
+      questionsAsked: ["TMAY", "What are you looking for in your next role and next company?"],
       questionsToAsk: [],
       notes: "",
       createdAt: Date.now(),
