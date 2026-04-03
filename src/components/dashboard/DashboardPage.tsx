@@ -94,8 +94,18 @@ export default function DashboardPage() {
   );
 
   // Next interview event
-  const upcomingEvents = state.events
+  const now = new Date();
+  // All events from today onward (for week/month views)
+  const allUpcomingEvents = state.events
     .filter((ev) => new Date(ev.date + "T12:00:00") >= today)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Future events only — accounts for time (for list view and stat card)
+  const upcomingEvents = state.events
+    .filter((ev) => {
+      const evEnd = ev.endTime || ev.startTime || "23:59";
+      const evDateTime = new Date(`${ev.date}T${evEnd}:00`);
+      return evDateTime > now;
+    })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const nextInterview = upcomingEvents.find((ev) => ev.category === "interview");
 
@@ -1054,12 +1064,12 @@ export default function DashboardPage() {
                   <p className="py-8 text-center text-sm text-gray-400">No upcoming events</p>
                 ) : listMode === "chrono" ? (
                   <div className="space-y-2">
-                    {upcomingEvents.map((ev) => renderEvent(ev, true))}
-                    <div className="flex items-center gap-4 pt-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-4 pb-2 text-xs text-gray-400">
                       <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Interview</span>
                       <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /> Practice</span>
                       <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> Networking</span>
                     </div>
+                    {upcomingEvents.map((ev) => renderEvent(ev, true))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
