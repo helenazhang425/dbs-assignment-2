@@ -186,6 +186,8 @@ export default function DashboardPage() {
         companyId: null,
         companyName: eventCompanyName,
         role: eventRole,
+        questionsAsked: [],
+        questionsToAsk: [],
         notes: eventNotes.trim(),
       },
     });

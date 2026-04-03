@@ -85,6 +85,8 @@ export interface PrepEvent {
   companyId: string | null;
   companyName: string;
   role: string;
+  questionsAsked: string[];
+  questionsToAsk: string[];
   notes: string;
   createdAt: number;
 }

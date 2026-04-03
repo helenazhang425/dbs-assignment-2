@@ -28,6 +28,10 @@ export type AppAction =
   | { type: "ADD_EVENT"; payload: Omit<PrepEvent, "id" | "createdAt"> }
   | { type: "UPDATE_EVENT"; payload: { id: string; updates: Partial<PrepEvent> } }
   | { type: "DELETE_EVENT"; payload: { id: string } }
+  | { type: "ADD_EVENT_QUESTION_ASKED"; payload: { eventId: string; question: string } }
+  | { type: "REMOVE_EVENT_QUESTION_ASKED"; payload: { eventId: string; index: number } }
+  | { type: "ADD_EVENT_QUESTION_TO_ASK"; payload: { eventId: string; question: string } }
+  | { type: "REMOVE_EVENT_QUESTION_TO_ASK"; payload: { eventId: string; index: number } }
   // Applications
   | { type: "ADD_APPLICATION"; payload: Omit<Application, "id" | "createdAt"> }
   | { type: "UPDATE_APPLICATION"; payload: { id: string; updates: Partial<Application> } }
@@ -261,6 +265,42 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         events: state.events.filter((ev) => ev.id !== action.payload.id),
+      };
+    case "ADD_EVENT_QUESTION_ASKED":
+      return {
+        ...state,
+        events: state.events.map((ev) =>
+          ev.id === action.payload.eventId
+            ? { ...ev, questionsAsked: [...ev.questionsAsked, action.payload.question] }
+            : ev
+        ),
+      };
+    case "REMOVE_EVENT_QUESTION_ASKED":
+      return {
+        ...state,
+        events: state.events.map((ev) =>
+          ev.id === action.payload.eventId
+            ? { ...ev, questionsAsked: ev.questionsAsked.filter((_, i) => i !== action.payload.index) }
+            : ev
+        ),
+      };
+    case "ADD_EVENT_QUESTION_TO_ASK":
+      return {
+        ...state,
+        events: state.events.map((ev) =>
+          ev.id === action.payload.eventId
+            ? { ...ev, questionsToAsk: [...ev.questionsToAsk, action.payload.question] }
+            : ev
+        ),
+      };
+    case "REMOVE_EVENT_QUESTION_TO_ASK":
+      return {
+        ...state,
+        events: state.events.map((ev) =>
+          ev.id === action.payload.eventId
+            ? { ...ev, questionsToAsk: ev.questionsToAsk.filter((_, i) => i !== action.payload.index) }
+            : ev
+        ),
       };
 
     // Applications

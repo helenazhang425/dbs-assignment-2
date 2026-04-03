@@ -179,7 +179,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           </div>
                         </div>
 
-                        {/* Prep tasks for this event */}
+                        {/* Prep tasks */}
                         {evTasks.length > 0 && (
                           <div className="mt-3 border-t border-gray-100 pt-2">
                             <p className="mb-1 text-xs text-gray-400">
@@ -200,6 +200,52 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           </div>
                         )}
 
+                        {/* Questions to Ask */}
+                        <div className="mt-3 border-t border-gray-100 pt-2">
+                          <p className="mb-1 text-xs font-medium text-gray-500">Questions to Ask</p>
+                          {ev.questionsToAsk.map((q, qi) => (
+                            <div key={qi} className="group flex items-center gap-2 py-0.5">
+                              <span className="flex-1 text-xs text-gray-600">{q}</span>
+                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
+                                className="invisible group-hover:visible text-gray-300 hover:text-red-500">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                          <input placeholder="+ Add question to ask" onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              dispatch({ type: "ADD_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }}
+                            className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
+                        </div>
+
+                        {/* Questions Asked */}
+                        <div className="mt-2 border-t border-gray-100 pt-2">
+                          <p className="mb-1 text-xs font-medium text-gray-500">Questions They Asked</p>
+                          {ev.questionsAsked.map((q, qi) => (
+                            <div key={qi} className="group flex items-center gap-2 py-0.5">
+                              <span className="flex-1 text-xs text-gray-600">{q}</span>
+                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
+                                className="invisible group-hover:visible text-gray-300 hover:text-red-500">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                          <input placeholder="+ Add question they asked" onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              dispatch({ type: "ADD_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }}
+                            className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
+                        </div>
+
                         {ev.notes && <p className="mt-2 text-xs text-gray-400">{ev.notes}</p>}
                       </div>
                     </div>
@@ -210,60 +256,39 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
           </div>
         </div>
 
-        {/* Right column — Questions */}
+        {/* Right column — Summary */}
         <div className="space-y-6">
           {/* Interview Date */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Interview Date</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Next Interview</label>
             <input type="date" value={company.interviewDate} onChange={(e) => update({ interviewDate: e.target.value })}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </div>
 
-          {/* Questions to Ask */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Questions to Ask Them</label>
-            <div className="space-y-2">
-              {company.questionsToAsk.map((q, i) => (
-                <div key={i} className="group flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                  <span className="flex-1 text-sm text-gray-700">{q}</span>
-                  <button onClick={() => removeQuestionToAsk(i)} className="invisible group-hover:visible text-gray-300 hover:text-red-500">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+          {/* Quick stats */}
+          <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Total rounds</span>
+              <span className="font-medium text-gray-900">{companyEvents.length}</span>
             </div>
-            <form onSubmit={addQuestionToAsk} className="mt-2">
-              <input type="text" value={newQuestionToAsk} onChange={(e) => setNewQuestionToAsk(e.target.value)}
-                placeholder="+ Add a question to ask"
-                onKeyDown={(e) => { if (e.key === "Enter") addQuestionToAsk(e); }}
-                className="w-full text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700 px-3 py-2" />
-            </form>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Questions asked</span>
+              <span className="font-medium text-gray-900">{companyEvents.reduce((sum, ev) => sum + ev.questionsAsked.length, 0)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Questions to prep</span>
+              <span className="font-medium text-gray-900">{companyEvents.reduce((sum, ev) => sum + ev.questionsToAsk.length, 0)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Prep tasks</span>
+              <span className="font-medium text-gray-900">
+                {state.checklist.filter((t) => companyEvents.some((ev) => ev.id === t.eventId)).filter((t) => t.completed).length}
+                /{state.checklist.filter((t) => companyEvents.some((ev) => ev.id === t.eventId)).length}
+              </span>
+            </div>
           </div>
 
-          {/* Questions Asked */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Questions They Asked</label>
-            <div className="space-y-2">
-              {company.questionsAsked.map((q, i) => (
-                <div key={i} className="group flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                  <span className="flex-1 text-sm text-gray-700">{q}</span>
-                  <button onClick={() => removeQuestionAsked(i)} className="invisible group-hover:visible text-gray-300 hover:text-red-500">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <form onSubmit={addQuestionAsked} className="mt-2">
-              <input type="text" value={newQuestionAsked} onChange={(e) => setNewQuestionAsked(e.target.value)}
-                placeholder="+ Add a question they asked"
-                onKeyDown={(e) => { if (e.key === "Enter") addQuestionAsked(e); }}
-                className="w-full text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700 px-3 py-2" />
-            </form>
-          </div>
+          <p className="text-xs text-gray-400">Questions are tracked per interview round on the timeline. Click into each round to add questions.</p>
         </div>
       </div>
     </div>
