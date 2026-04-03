@@ -14,6 +14,13 @@ export default function DashboardPage() {
   const [newItemDate, setNewItemDate] = useState("");
   const [calendarView, setCalendarView] = useState<"list" | "week" | "month">("list");
   const [listMode, setListMode] = useState<"chrono" | "bytype">("chrono");
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [companyPrepSections, setCompanyPrepSections] = useState<string[]>(() => {
+    // Initialize with events that already have tasks
+    return ["ev2", "ev3", "ev6", "ev7"]; // Blink Health, Clover Health, Sprinter Health, Granted
+  });
+  const [showPrepSearch, setShowPrepSearch] = useState(false);
+  const [prepSearchQuery, setPrepSearchQuery] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -248,7 +255,10 @@ export default function DashboardPage() {
     <div>
       {/* Greeting */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <span className="text-xs text-gray-400">{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+        </div>
         <p className="mt-1 text-sm text-gray-500">
           {eventsThisWeek.length > 0
             ? `You have ${eventsThisWeek.length} event${eventsThisWeek.length > 1 ? "s" : ""} this week${
@@ -291,10 +301,18 @@ export default function DashboardPage() {
 
 
         {/* Upcoming Interview */}
-        {nextInterview ? (
+        {nextInterview ? (() => {
+          const totalInterviews = upcomingEvents.filter((ev) => ev.category === "interview").length;
+          const moreCount = totalInterviews - 1;
+          return (
           <Link href={nextInterview.companyId ? `/companies/${nextInterview.companyId}` : "/companies"}>
             <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
+                {moreCount > 0 && (
+                  <span className="text-xs text-indigo-500">+{moreCount} more</span>
+                )}
+              </div>
               <p className="mt-3 text-sm font-semibold text-gray-900">{nextInterview.title}</p>
               {nextInterview.startTime && (
                 <p className="mt-0.5 text-xs text-gray-500">
@@ -307,7 +325,8 @@ export default function DashboardPage() {
               </p>
             </div>
           </Link>
-        ) : (
+          );
+        })() : (
           <div className="h-full rounded-xl border border-gray-200 bg-white p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
             <p className="mt-3 text-sm text-gray-400">None scheduled</p>
@@ -446,14 +465,14 @@ export default function DashboardPage() {
                   </Droppable>
                 </DragDropContext>
                 {/* Inline add at bottom of General Prep */}
-                <form className="flex items-center gap-3 rounded-lg px-3 py-2" onSubmit={handleAddGeneral}>
-                  <span className="h-4 w-4" />
+                <form className="group/addform flex items-center gap-3 rounded-lg px-3 py-2" onSubmit={handleAddGeneral}>
+                  <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
                   <input
                     type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}
-                    placeholder="Type to add a task..."
+                    placeholder="Add a task"
                     className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700"
                   />
-                  <label className="cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative">
+                  <label className={`cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative ${newItem ? "opacity-100" : "opacity-0 group-hover/addform:opacity-100"}`}>
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -468,43 +487,105 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </form>
-                {/* Event-specific tasks */}
-                {(() => {
-                  const eventGroups = new Map<string, { title: string; items: typeof eventChecklist }>();
-                  eventChecklist.forEach((item) => {
-                    const ev = state.events.find((e) => e.id === item.eventId);
-                    const key = item.eventId!;
-                    if (!eventGroups.has(key)) {
-                      eventGroups.set(key, { title: ev?.title ?? "Event", items: [] });
-                    }
-                    eventGroups.get(key)!.items.push(item);
-                  });
-                  return eventGroups.size > 0 ? (
-                    <>
-                      <div className="px-3 pt-3">
-                        <div className="border-t border-gray-200 mt-2" />
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company Prep</p>
+                {/* Company Prep — intentional sections */}
+                <div className="px-3 pt-3">
+                  <div className="border-t border-gray-200 mt-2" />
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company Prep</p>
+                    <button onClick={() => { setShowPrepSearch(!showPrepSearch); setPrepSearchQuery(""); }}
+                      className="text-gray-400 hover:text-indigo-500 transition-colors">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search to add a new prep section */}
+                {showPrepSearch && (
+                  <div className="px-3 pt-2 relative">
+                    <input
+                      value={prepSearchQuery}
+                      onChange={(e) => setPrepSearchQuery(e.target.value)}
+                      placeholder="Search upcoming events..."
+                      autoFocus
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    {prepSearchQuery && (
+                      <div className="absolute z-10 mt-1 left-3 right-3 rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+                        {upcomingEvents
+                          .filter((ev) => !companyPrepSections.includes(ev.id))
+                          .filter((ev) => ev.title.toLowerCase().includes(prepSearchQuery.toLowerCase()) || ev.companyName?.toLowerCase().includes(prepSearchQuery.toLowerCase()))
+                          .map((ev) => (
+                            <button key={ev.id} onClick={() => {
+                              setCompanyPrepSections((prev) => [...prev, ev.id]);
+                              setShowPrepSearch(false);
+                              setPrepSearchQuery("");
+                            }}
+                              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50">
+                              <span className="font-medium">{ev.title}</span>
+                              <span className="ml-2 text-xs text-gray-400">
+                                {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </span>
+                            </button>
+                          ))}
+                        {/* Custom option */}
+                        <button onClick={() => {
+                          const customId = `custom-${crypto.randomUUID()}`;
+                          setCompanyPrepSections((prev) => [...prev, customId]);
+                          // Add a placeholder task so the section has a name
+                          dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: prepSearchQuery.trim(), eventId: customId } });
+                          setShowPrepSearch(false);
+                          setPrepSearchQuery("");
+                        }}
+                          className="block w-full px-3 py-2 text-left text-sm text-indigo-600 hover:bg-indigo-50 border-t border-gray-100">
+                          + Create &ldquo;{prepSearchQuery}&rdquo;
+                        </button>
                       </div>
-                      {Array.from(eventGroups.entries()).map(([eventId, group]) => (
-                        <div key={eventId}>
-                          <p className="px-3 pt-2 text-xs text-gray-400">{group.title}</p>
-                          {group.items.map(renderItem)}
-                          <form className="flex items-center gap-3 rounded-lg px-3 py-1.5" onSubmit={(e) => {
-                            e.preventDefault();
-                            const input = (e.target as HTMLFormElement).elements.namedItem("companyTask") as HTMLInputElement;
-                            if (!input.value.trim()) return;
-                            dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: eventId } });
-                            input.value = "";
-                          }}>
-                            <span className="h-4 w-4" />
-                            <input name="companyTask" placeholder="Type to add..."
-                              className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
-                          </form>
+                    )}
+                  </div>
+                )}
+
+                {/* Render active company prep sections */}
+                {companyPrepSections
+                  .filter((sectionId) => {
+                    // Auto-remove: event passed or all tasks completed
+                    const ev = state.events.find((e) => e.id === sectionId);
+                    if (ev && new Date(ev.date + "T12:00:00") < today) return false;
+                    const tasks = eventChecklist.filter((t) => t.eventId === sectionId);
+                    if (tasks.length > 0 && tasks.every((t) => t.completed)) return false;
+                    return true;
+                  })
+                  .map((sectionId) => {
+                    const ev = state.events.find((e) => e.id === sectionId);
+                    const sectionTitle = ev?.title ?? sectionId.startsWith("custom-") ? eventChecklist.find((t) => t.eventId === sectionId)?.text ?? "Custom" : sectionId;
+                    const evTasks = eventChecklist.filter((t) => t.eventId === sectionId);
+                    return (
+                      <div key={sectionId} className="group/section">
+                        <div className="flex items-center px-3 pt-2">
+                          <p className="flex-1 text-xs text-gray-400">{ev?.title ?? sectionTitle}</p>
+                          <button onClick={() => setCompanyPrepSections((prev) => prev.filter((id) => id !== sectionId))}
+                            className="invisible group-hover/section:visible text-gray-300 hover:text-red-500">
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      ))}
-                    </>
-                  ) : null;
-                })()}
+                        {evTasks.map(renderItem)}
+                        <form className="flex items-center gap-3 rounded-lg px-3 py-1.5" onSubmit={(e) => {
+                          e.preventDefault();
+                          const input = (e.target as HTMLFormElement).elements.namedItem(`companyTask-${sectionId}`) as HTMLInputElement;
+                          if (!input.value.trim()) return;
+                          dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: sectionId } });
+                          input.value = "";
+                        }}>
+                          <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
+                          <input name={`companyTask-${sectionId}`} placeholder="Add a task"
+                            className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
+                        </form>
+                      </div>
+                    );
+                  })}
               </div>
             );
           })()}
@@ -800,7 +881,7 @@ export default function DashboardPage() {
                           dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: ev.id } });
                           input.value = "";
                         }}>
-                          <input name="newTask" placeholder="+ Add prep task"
+                          <input name="newTask" placeholder="Add a task"
                             className="flex-1 rounded border border-transparent px-2 py-1 text-xs text-gray-500 placeholder-gray-400 focus:border-gray-200 focus:text-gray-600 focus:outline-none" />
                         </form>
                       </div>

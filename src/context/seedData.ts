@@ -116,12 +116,14 @@ export const seedData: AppState = {
     { id: "cl6", text: "Prepare questions for Google", completed: false, dueDate: "2026-04-14", companyId: "c1", recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 3 },
     { id: "cl7", text: "Review Google job description", completed: true, dueDate: "", companyId: "c1", recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 6 },
     // Event-specific prep tasks
-    { id: "cl8", text: "Research Blink Health", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
-    { id: "cl9", text: "Review job description", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
-    { id: "cl10", text: "Look up CEO background", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
-    { id: "cl11", text: "Prepare 'why Clover Health' answer", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
-    { id: "cl12", text: "Practice case questions", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
-    { id: "cl13", text: "Prep STAR story about product launch", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
+    { id: "cl8", text: "Why this role?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
+    { id: "cl9", text: "Why this company?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
+    { id: "cl10", text: "Why this role?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
+    { id: "cl11", text: "Why this company?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
+    { id: "cl12", text: "Why this role?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev6", createdAt: Date.now() - 86400000 },
+    { id: "cl13", text: "Why this company?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev6", createdAt: Date.now() - 86400000 },
+    { id: "cl14", text: "Why this role?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
+    { id: "cl15", text: "Why this company?", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
   ],
 
   stories: [
