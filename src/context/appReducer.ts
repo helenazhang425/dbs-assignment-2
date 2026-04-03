@@ -13,6 +13,7 @@ export type AppAction =
   // Checklist
   | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null; eventId?: string | null; recurring?: "daily" | "weekly" | null } }
   | { type: "TOGGLE_CHECKLIST_ITEM"; payload: { id: string } }
+  | { type: "REORDER_CHECKLIST"; payload: { ids: string[] } }
   | { type: "UPDATE_CHECKLIST_ITEM"; payload: { id: string; updates: Partial<ChecklistItem> } }
   | { type: "DELETE_CHECKLIST_ITEM"; payload: { id: string } }
   | { type: "CLEAR_COMPLETED" }
@@ -140,6 +141,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         checklist: state.checklist.filter((item) => item.id !== action.payload.id),
       };
+    case "REORDER_CHECKLIST": {
+      const orderMap = new Map(action.payload.ids.map((id, i) => [id, i]));
+      const reordered = [...state.checklist].sort((a, b) => {
+        const aIdx = orderMap.get(a.id) ?? Infinity;
+        const bIdx = orderMap.get(b.id) ?? Infinity;
+        return aIdx - bIdx;
+      });
+      return { ...state, checklist: reordered };
+    }
     case "CLEAR_COMPLETED":
       return {
         ...state,

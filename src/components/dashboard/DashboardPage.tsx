@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useApp } from "@/context/AppContext";
 import { EventCategory, InterviewType, InterviewStage } from "@/types";
 import Button from "@/components/ui/Button";
@@ -214,6 +215,15 @@ export default function DashboardPage() {
   // Selected date events
   const selectedDateEvents = selectedDate ? getEventsForDateStr(selectedDate) : [];
 
+  function urgencyColor(dateStr: string) {
+    const diff = Math.ceil((new Date(dateStr + "T12:00:00").getTime() - today.getTime()) / 86400000);
+    if (diff <= 0) return "text-red-600 font-bold";
+    if (diff <= 1) return "text-red-500 font-semibold";
+    if (diff <= 3) return "text-orange-500 font-semibold";
+    if (diff <= 7) return "text-amber-500 font-medium";
+    return "text-indigo-500 font-medium";
+  }
+
   function dotColor(cat: string) {
     if (cat === "interview") return "bg-indigo-500";
     if (cat === "practice") return "bg-green-500";
@@ -341,29 +351,16 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Checklist</h2>
-            <Link href="/checklist" className="text-xs text-indigo-500 hover:text-indigo-700">View all</Link>
           </div>
 
-          <form onSubmit={handleAddGeneral} className="mb-4 flex gap-2">
-            <input
-              type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}
-              placeholder="Add a task..."
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <input
-              type="date" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)}
-              className="w-36 rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <button type="submit" disabled={!newItem.trim()}
-              className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >Add</button>
-          </form>
-
           {(() => {
-            const dated = generalChecklist
-              .filter((i) => i.dueDate)
-              .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-            const undated = generalChecklist.filter((i) => !i.dueDate);
+            // Sort: dated first (ascending), then undated
+            const sortedGeneral = [...generalChecklist].sort((a, b) => {
+              if (a.dueDate && !b.dueDate) return -1;
+              if (!a.dueDate && b.dueDate) return 1;
+              if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+              return 0;
+            });
 
             if (generalChecklist.length === 0) {
               return <p className="py-6 text-center text-sm text-gray-400">No tasks yet. Add one above!</p>;
@@ -405,18 +402,72 @@ export default function DashboardPage() {
               </div>
             );
 
+            function handleDragEnd(result: DropResult) {
+              if (!result.destination) return;
+              const items = [...sortedGeneral];
+              const [moved] = items.splice(result.source.index, 1);
+              items.splice(result.destination.index, 0, moved);
+              // Reorder all checklist items: keep event items in place, reorder general
+              const eventItems = state.checklist.filter((i) => i.eventId || i.companyId);
+              dispatch({ type: "REORDER_CHECKLIST", payload: { ids: [...items.map((i) => i.id), ...eventItems.map((i) => i.id)] } });
+            }
+
             return (
               <div className="space-y-1">
                 <div className="px-3 pb-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">General Prep</p>
                 </div>
-                {dated.map(renderItem)}
-                {dated.length > 0 && undated.length > 0 && (
-                  <div className="px-3 pt-2">
-                    <p className="text-xs text-gray-400">No date</p>
-                  </div>
-                )}
-                {undated.map(renderItem)}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="general-checklist">
+                    {(provided) => (
+                      <div ref={provided.innerRef} {...provided.droppableProps}>
+                        {sortedGeneral.map((item, index) => (
+                          <Draggable key={item.id} draggableId={item.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div ref={provided.innerRef} {...provided.draggableProps}
+                                className={snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}>
+                                <div className="flex items-center">
+                                  <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400">
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                      <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                                      <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                                      <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1">{renderItem(item)}</div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+                {/* Inline add at bottom of General Prep */}
+                <form className="flex items-center gap-3 rounded-lg px-3 py-2" onSubmit={handleAddGeneral}>
+                  <span className="h-4 w-4" />
+                  <input
+                    type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}
+                    placeholder="Type to add a task..."
+                    className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700"
+                  />
+                  <label className="cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <input
+                      type="date" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </label>
+                  {newItemDate && (
+                    <span className="text-xs text-indigo-500">
+                      {new Date(newItemDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                </form>
                 {/* Event-specific tasks */}
                 {(() => {
                   const eventGroups = new Map<string, { title: string; items: typeof eventChecklist }>();
@@ -438,6 +489,17 @@ export default function DashboardPage() {
                         <div key={eventId}>
                           <p className="px-3 pt-2 text-xs text-gray-400">{group.title}</p>
                           {group.items.map(renderItem)}
+                          <form className="flex items-center gap-3 rounded-lg px-3 py-1.5" onSubmit={(e) => {
+                            e.preventDefault();
+                            const input = (e.target as HTMLFormElement).elements.namedItem("companyTask") as HTMLInputElement;
+                            if (!input.value.trim()) return;
+                            dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: eventId } });
+                            input.value = "";
+                          }}>
+                            <span className="h-4 w-4" />
+                            <input name="companyTask" placeholder="Type to add..."
+                              className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
+                          </form>
                         </div>
                       ))}
                     </>
@@ -684,7 +746,7 @@ export default function DashboardPage() {
                       {ev.notes && <p className="mt-0.5 text-xs text-gray-400 truncate">{ev.notes}</p>}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-medium text-indigo-600">{daysUntil(ev.date)}</p>
+                      <p className={`text-xs ${urgencyColor(ev.date)}`}>{daysUntil(ev.date)}</p>
                       <p className="text-xs text-gray-400">
                         {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </p>
