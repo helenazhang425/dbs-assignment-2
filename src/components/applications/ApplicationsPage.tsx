@@ -67,6 +67,8 @@ export default function ApplicationsPage() {
   const [savedColumnFilters, setSavedColumnFilters] = useState<Record<string, string>>({});
   const [savedActiveFilter, setSavedActiveFilter] = useState<string | null>(null);
   const [savedFilterSearch, setSavedFilterSearch] = useState("");
+  const [savedSortKey, setSavedSortKey] = useState<string>("");
+  const [savedSortDir, setSavedSortDir] = useState<SortDir>("none");
   const [newSavedUrl, setNewSavedUrl] = useState("");
   const [newSavedNotes, setNewSavedNotes] = useState("");
   const [showAddSaved, setShowAddSaved] = useState(false);
@@ -113,8 +115,16 @@ export default function ApplicationsPage() {
         result = result.filter((p) => (p as unknown as Record<string, string>)[key]?.toLowerCase() === value.toLowerCase());
       }
     });
+    if (savedSortDir !== "none" && savedSortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = (a as unknown as Record<string, string>)[savedSortKey] ?? "";
+        const bVal = (b as unknown as Record<string, string>)[savedSortKey] ?? "";
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return savedSortDir === "asc" ? cmp : -cmp;
+      });
+    }
     return result;
-  }, [state.savedPositions, savedSearch, savedColumnFilters]);
+  }, [state.savedPositions, savedSearch, savedColumnFilters, savedSortKey, savedSortDir]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -519,7 +529,18 @@ export default function ApplicationsPage() {
                   {savedColumns.map((col) => (
                     <th key={col.key} className={`${col.width} select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 relative`}>
                       <div className="flex items-center gap-1">
-                        <span>{col.label}</span>
+                        <span className="cursor-pointer hover:text-gray-700" onClick={() => {
+                          if (savedSortKey === col.key) {
+                            if (savedSortDir === "asc") setSavedSortDir("desc");
+                            else if (savedSortDir === "desc") setSavedSortDir("none");
+                            else setSavedSortDir("asc");
+                          } else { setSavedSortKey(col.key); setSavedSortDir("asc"); }
+                        }}>
+                          {col.label}
+                          {savedSortKey === col.key && savedSortDir !== "none" && (
+                            <span className="text-indigo-500 ml-1">{savedSortDir === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </span>
                         <button onClick={() => setSavedActiveFilter(savedActiveFilter === col.key ? null : col.key)}
                           className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${savedColumnFilters[col.key] ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
                           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
