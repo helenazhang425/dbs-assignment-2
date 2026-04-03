@@ -41,7 +41,7 @@ export default function ApplicationsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [showAddRow, setShowAddRow] = useState(false);
+  const [showAllApps, setShowAllApps] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
 
@@ -83,6 +83,12 @@ export default function ApplicationsPage() {
     return result;
   }, [state.applications, search, verdictFilter, sortKey, sortDir]);
 
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const recentApps = filtered.filter((a) => !a.appliedDate || new Date(a.appliedDate + "T12:00:00") >= oneMonthAgo);
+  const olderApps = filtered.filter((a) => a.appliedDate && new Date(a.appliedDate + "T12:00:00") < oneMonthAgo);
+  const displayedApps = showAllApps ? filtered : recentApps;
+
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
@@ -111,7 +117,7 @@ export default function ApplicationsPage() {
       type: "ADD_APPLICATION",
       payload: { company: newCompany.trim(), role: newRole.trim(), appliedDate: newDate, method: newMethod, location: newLocation.trim(), verdict: newVerdict, notes: "", spokeTo: "" },
     });
-    setNewCompany(""); setNewRole(""); setNewDate(""); setNewMethod("Company website"); setNewLocation(""); setNewVerdict("No Update"); setShowAddRow(false);
+    setNewCompany(""); setNewRole(""); setNewDate(""); setNewMethod("Company website"); setNewLocation(""); setNewVerdict("No Update");
   }
 
   function handleAddSaved(e: React.FormEvent) {
@@ -186,12 +192,7 @@ export default function ApplicationsPage() {
             {state.applications.length} applied · {state.savedPositions.length} saved
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleExport}>Export CSV</Button>
-          <Button onClick={() => tab === "applied" ? setShowAddRow(true) : setShowAddSaved(true)}>
-            {tab === "applied" ? "Add Application" : "Add Position"}
-          </Button>
-        </div>
+        <Button variant="secondary" onClick={handleExport}>Export CSV</Button>
       </div>
 
       {/* Tabs */}
@@ -247,7 +248,7 @@ export default function ApplicationsPage() {
             </div>
           )}
 
-          <p className="mb-2 text-xs text-gray-400">{filtered.length} results</p>
+          <p className="mb-2 text-xs text-gray-400">{displayedApps.length} shown{!showAllApps && olderApps.length > 0 ? ` · ${olderApps.length} older hidden` : ""}</p>
 
           {/* Table */}
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -270,7 +271,34 @@ export default function ApplicationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((app) => (
+                {/* Inline add row */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-3 py-2.5" />
+                  <td className="px-4 py-2.5">
+                    <form onSubmit={handleAddRow} className="flex items-center gap-1">
+                      <span className="text-gray-300 text-sm">+</span>
+                      <input value={newCompany} onChange={(e) => setNewCompany(e.target.value)}
+                        placeholder="Add application..."
+                        className="w-full text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
+                    </form>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newCompany && <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Role"
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newCompany && <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
+                      className="text-sm text-gray-400 bg-transparent border-none focus:outline-none" />}
+                  </td>
+                  <td className="px-4 py-2.5" />
+                  <td className="px-4 py-2.5" />
+                  <td className="px-4 py-2.5">
+                    {newCompany && <button type="button" onClick={handleAddRow as unknown as () => void}
+                      className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Add</button>}
+                  </td>
+                  <td />
+                </tr>
+                {displayedApps.map((app) => (
                   <tr key={app.id} className={`group hover:bg-gray-50 ${selectedIds.has(app.id) ? "bg-indigo-50/50" : ""}`}>
                     <td className="px-3 py-2.5">
                       <input type="checkbox" checked={selectedIds.has(app.id)} onChange={() => toggleSelect(app.id)}
@@ -343,33 +371,24 @@ export default function ApplicationsPage() {
                 ))}
               </tbody>
             </table>
-            {filtered.length === 0 && (
+            {displayedApps.length === 0 && (
               <div className="py-12 text-center text-sm text-gray-400">No applications match your search.</div>
             )}
           </div>
 
-          {showAddRow && (
-            <form onSubmit={handleAddRow} className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                <input value={newCompany} onChange={(e) => setNewCompany(e.target.value)} placeholder="Company" required
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Role"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <input value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="Location"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <select value={newVerdict} onChange={(e) => setNewVerdict(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                  {VERDICTS.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <div className="flex gap-2">
-                  <Button type="submit" size="sm">Add</Button>
-                  <Button variant="secondary" size="sm" type="button" onClick={() => setShowAddRow(false)}>Cancel</Button>
-                </div>
-              </div>
-            </form>
+          {!showAllApps && olderApps.length > 0 && (
+            <button onClick={() => setShowAllApps(true)}
+              className="mt-3 w-full rounded-lg border border-gray-200 bg-white py-2.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+              Show {olderApps.length} older applications
+            </button>
           )}
+          {showAllApps && olderApps.length > 0 && (
+            <button onClick={() => setShowAllApps(false)}
+              className="mt-3 w-full text-center text-xs text-gray-400 hover:text-gray-600">
+              Hide older applications
+            </button>
+          )}
+
         </>
       )}
 
