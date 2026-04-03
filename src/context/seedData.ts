@@ -520,8 +520,8 @@ export const seedData: AppState = {
   ],
 
   savedPositions: [
-    { id: "sp1", company: "Stripe", role: "Product Manager", url: "", notes: "Saw on LinkedIn, looks like a good fit", deadline: "2026-04-20", createdAt: Date.now() - 86400000 * 2 },
-    { id: "sp2", company: "Figma", role: "Associate PM", url: "", notes: "Referral from classmate", deadline: "", createdAt: Date.now() - 86400000 },
-    { id: "sp3", company: "Notion", role: "Product Manager, Growth", url: "", notes: "", deadline: "2026-04-15", createdAt: Date.now() },
+    { id: "sp1", company: "Stripe", role: "Product Manager", method: "LinkedIn", url: "", notes: "Saw on LinkedIn, looks like a good fit", deadline: "2026-04-20", createdAt: Date.now() - 86400000 * 2 },
+    { id: "sp2", company: "Figma", role: "Associate PM", method: "Referral", url: "", notes: "Referral from classmate", deadline: "", createdAt: Date.now() - 86400000 },
+    { id: "sp3", company: "Notion", role: "Product Manager, Growth", method: "Company website", url: "", notes: "", deadline: "2026-04-15", createdAt: Date.now() },
   ],
 };

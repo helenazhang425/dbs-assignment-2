@@ -106,6 +106,7 @@ export interface SavedPosition {
   id: string;
   company: string;
   role: string;
+  method: string;
   url: string;
   notes: string;
   deadline: string;

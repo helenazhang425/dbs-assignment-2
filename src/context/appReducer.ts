@@ -319,7 +319,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             company: pos.company,
             role: pos.role,
             appliedDate: new Date().toISOString().slice(0, 10),
-            method: "",
+            method: pos.method || "",
             location: "",
             verdict: "No Update",
             notes: pos.notes,

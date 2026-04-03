@@ -60,6 +60,8 @@ export default function ApplicationsPage() {
   const [newSavedCompany, setNewSavedCompany] = useState("");
   const [newSavedRole, setNewSavedRole] = useState("");
   const [newSavedDeadline, setNewSavedDeadline] = useState("");
+  const [newSavedMethod, setNewSavedMethod] = useState("");
+  const [newSavedUrl, setNewSavedUrl] = useState("");
   const [newSavedNotes, setNewSavedNotes] = useState("");
   const [showAddSaved, setShowAddSaved] = useState(false);
 
@@ -136,7 +138,7 @@ export default function ApplicationsPage() {
     if (!newSavedCompany.trim()) return;
     dispatch({
       type: "ADD_SAVED_POSITION",
-      payload: { company: newSavedCompany.trim(), role: newSavedRole.trim(), url: "", notes: newSavedNotes.trim(), deadline: newSavedDeadline },
+      payload: { company: newSavedCompany.trim(), role: newSavedRole.trim(), method: newSavedMethod.trim(), url: newSavedUrl.trim(), notes: newSavedNotes.trim(), deadline: newSavedDeadline },
     });
     setNewSavedCompany(""); setNewSavedRole(""); setNewSavedDeadline(""); setNewSavedNotes(""); setShowAddSaved(false);
   }
@@ -462,59 +464,90 @@ export default function ApplicationsPage() {
 
       {tab === "saved" && (
         <>
-          <div className="space-y-3">
-            {state.savedPositions.length === 0 ? (
-              <div className="py-12 text-center text-sm text-gray-400">
-                No saved positions. Add one to track jobs you want to apply to.
-              </div>
-            ) : (
-              state.savedPositions.map((pos) => (
-                <div key={pos.id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{pos.company}</p>
-                    <p className="text-sm text-gray-500">{pos.role}</p>
-                    {pos.notes && <p className="mt-1 text-xs text-gray-400">{pos.notes}</p>}
-                  </div>
-                  {pos.deadline && (
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-gray-400">Deadline</p>
-                      <p className="text-sm font-medium text-gray-700">
-                        {new Date(pos.deadline + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </p>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-32">Method</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Link</th>
+                  <th className="w-24" />
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {/* Inline add row */}
+                <tr className="hover:bg-gray-50">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-300 text-sm">+</span>
+                      <input value={newSavedCompany} onChange={(e) => setNewSavedCompany(e.target.value)}
+                        placeholder="Add position..."
+                        onKeyDown={(e) => { if (e.key === "Enter" && newSavedCompany.trim()) { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
+                        className="w-full text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
                     </div>
-                  )}
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button size="sm" onClick={() => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id: pos.id } })}>
-                      Applied
-                    </Button>
-                    <button onClick={() => dispatch({ type: "DELETE_SAVED_POSITION", payload: { id: pos.id } })}
-                      className="text-gray-300 hover:text-red-500">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newSavedCompany && <input value={newSavedRole} onChange={(e) => setNewSavedRole(e.target.value)} placeholder="Role"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newSavedCompany && <input value={newSavedMethod} onChange={(e) => setNewSavedMethod(e.target.value)} placeholder="Method"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newSavedCompany && <input value={newSavedUrl} onChange={(e) => setNewSavedUrl(e.target.value)} placeholder="URL"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSaved(e as unknown as React.FormEvent); } }}
+                      className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {newSavedCompany && <button type="button" onClick={() => handleAddSaved({ preventDefault: () => {} } as React.FormEvent)}
+                      className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Save</button>}
+                  </td>
+                  <td />
+                </tr>
+                {state.savedPositions.map((pos) => (
+                  <tr key={pos.id} className="group hover:bg-gray-50">
+                    <td className="px-4 py-2.5">
+                      <span className="text-sm font-medium text-gray-900">{pos.company}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="text-sm text-gray-600">{pos.role}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="text-sm text-gray-500">{pos.method || "—"}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {pos.url ? (
+                        <a href={pos.url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-500 hover:text-indigo-700 truncate block max-w-48">
+                          {pos.url}
+                        </a>
+                      ) : <span className="text-sm text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Button size="sm" onClick={() => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id: pos.id } })}>
+                        Applied
+                      </Button>
+                    </td>
+                    <td className="px-2 py-2.5">
+                      <button onClick={() => dispatch({ type: "DELETE_SAVED_POSITION", payload: { id: pos.id } })}
+                        className="invisible group-hover:visible text-gray-300 hover:text-red-500">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {state.savedPositions.length === 0 && (
+              <div className="py-12 text-center text-sm text-gray-400">No saved positions. Add one above.</div>
             )}
           </div>
-
-          {showAddSaved && (
-            <form onSubmit={handleAddSaved} className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <input value={newSavedCompany} onChange={(e) => setNewSavedCompany(e.target.value)} placeholder="Company" required
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <input value={newSavedRole} onChange={(e) => setNewSavedRole(e.target.value)} placeholder="Role"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <input type="date" value={newSavedDeadline} onChange={(e) => setNewSavedDeadline(e.target.value)} placeholder="Deadline"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <div className="flex gap-2">
-                  <Button type="submit" size="sm">Save</Button>
-                  <Button variant="secondary" size="sm" type="button" onClick={() => setShowAddSaved(false)}>Cancel</Button>
-                </div>
-              </div>
-            </form>
-          )}
         </>
       )}
       {/* Delete confirmation */}
