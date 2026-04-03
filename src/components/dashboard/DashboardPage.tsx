@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useApp } from "@/context/AppContext";
 import { EventCategory, InterviewType, InterviewStage } from "@/types";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+
+const SOURCE_TZ = "America/Chicago"; // All stored times are in CST
 
 export default function DashboardPage() {
   const { state, dispatch } = useApp();
@@ -24,6 +26,37 @@ export default function DashboardPage() {
   const [showTzPicker, setShowTzPicker] = useState(false);
   const [tzSearch, setTzSearch] = useState("");
   const [displayTz, setDisplayTz] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+  // Convert time from CST to display timezone
+  const convertTime = useCallback((date: string, time: string): string => {
+    if (!time || displayTz === SOURCE_TZ) return time;
+    try {
+      const [h, m] = time.split(":").map(Number);
+      const srcDate = new Date(`${date}T${time}:00`);
+      // Get offset difference between source and target timezone
+      const srcFormatter = new Intl.DateTimeFormat("en-US", { timeZone: SOURCE_TZ, hour: "numeric", minute: "numeric", hour12: false });
+      const tgtFormatter = new Intl.DateTimeFormat("en-US", { timeZone: displayTz, hour: "numeric", minute: "numeric", hour12: false });
+      const srcParts = srcFormatter.formatToParts(srcDate);
+      const tgtParts = tgtFormatter.formatToParts(srcDate);
+      const srcHour = parseInt(srcParts.find(p => p.type === "hour")?.value ?? "0");
+      const srcMin = parseInt(srcParts.find(p => p.type === "minute")?.value ?? "0");
+      const tgtHour = parseInt(tgtParts.find(p => p.type === "hour")?.value ?? "0");
+      const tgtMin = parseInt(tgtParts.find(p => p.type === "minute")?.value ?? "0");
+      // Calculate the offset and apply to original time
+      const srcTotal = srcHour * 60 + srcMin;
+      const tgtTotal = tgtHour * 60 + tgtMin;
+      const offset = tgtTotal - srcTotal;
+      const originalTotal = h * 60 + m;
+      let converted = originalTotal + offset;
+      if (converted < 0) converted += 1440;
+      if (converted >= 1440) converted -= 1440;
+      const cH = Math.floor(converted / 60);
+      const cM = converted % 60;
+      return `${String(cH).padStart(2, "0")}:${String(cM).padStart(2, "0")}`;
+    } catch {
+      return time;
+    }
+  }, [displayTz]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -316,7 +349,7 @@ export default function DashboardPage() {
               <p className="mt-3 text-sm font-semibold text-gray-900">{nextInterview.title}</p>
               {nextInterview.startTime && (
                 <p className="mt-0.5 text-xs text-gray-500">
-                  {nextInterview.startTime}{nextInterview.endTime ? ` — ${nextInterview.endTime}` : ""}
+                  {convertTime(nextInterview.date, nextInterview.startTime)}{nextInterview.endTime ? ` — ${convertTime(nextInterview.date, nextInterview.endTime)}` : ""}
                 </p>
               )}
               <p className="mt-1 text-lg font-bold text-indigo-600">{daysUntil(nextInterview.date)}</p>
@@ -574,6 +607,11 @@ export default function DashboardPage() {
                       <div key={sectionId} className="group/section">
                         <div className="flex items-center px-3 pt-2">
                           <p className="flex-1 text-xs text-gray-400">{ev?.title ?? sectionTitle}</p>
+                          {ev?.date && (
+                            <span className={`text-xs ${new Date(ev.date + "T12:00:00") < today ? "text-red-500" : "text-gray-400"}`}>
+                              {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          )}
                           <button onClick={() => setCompanyPrepSections((prev) => prev.filter((id) => id !== sectionId))}
                             className="invisible group-hover/section:visible text-gray-300 hover:text-red-500">
                             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -913,7 +951,7 @@ export default function DashboardPage() {
                       </div>
                       {ev.startTime && (
                         <p className="mt-0.5 text-xs text-gray-500">
-                          {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
+                          {convertTime(ev.date, ev.startTime)}{ev.endTime ? ` — ${convertTime(ev.date, ev.endTime)}` : ""}
                         </p>
                       )}
                       {ev.notes && <p className="mt-0.5 text-xs text-gray-400 truncate">{ev.notes}</p>}
@@ -1107,7 +1145,7 @@ export default function DashboardPage() {
                                 : "bg-green-100 text-green-700"
                             }`}
                           >
-                            {ev.startTime && <span className="font-normal opacity-75">{ev.startTime} </span>}
+                            {ev.startTime && <span className="font-normal opacity-75">{convertTime(ev.date, ev.startTime)} </span>}
                             {(() => {
                               const tb = typeBadge(ev);
                               return tb ? tb.label : (ev.title.length > 10 ? ev.title.slice(0, 10) + "…" : ev.title);
@@ -1137,6 +1175,7 @@ export default function DashboardPage() {
                   checklist={state.checklist}
                   dispatch={dispatch}
                   onEditEvent={(id) => setEditingEventId(id)}
+                  convertTime={convertTime}
                 />
               )}
             </div>
@@ -1222,6 +1261,7 @@ export default function DashboardPage() {
                   checklist={state.checklist}
                   dispatch={dispatch}
                   onEditEvent={(id) => setEditingEventId(id)}
+                  convertTime={convertTime}
                 />
               )}
             </div>
@@ -1388,12 +1428,14 @@ function SelectedDatePanel({
   checklist,
   dispatch,
   onEditEvent,
+  convertTime,
 }: {
   dateStr: string;
   events: ReturnType<typeof Array.prototype.filter>;
   checklist: { id: string; text: string; completed: boolean; companyId: string | null }[];
   dispatch: React.Dispatch<{ type: "TOGGLE_CHECKLIST_ITEM"; payload: { id: string } }>;
   onEditEvent?: (id: string) => void;
+  convertTime?: (date: string, time: string) => string;
 }) {
   const dateLabel = new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
@@ -1429,7 +1471,7 @@ function SelectedDatePanel({
                 </div>
                 {ev.startTime && (
                   <p className="mt-1 ml-4 text-xs text-gray-500">
-                    {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
+                    {convertTime ? convertTime(dateStr, ev.startTime) : ev.startTime}{ev.endTime ? ` — ${convertTime ? convertTime(dateStr, ev.endTime) : ev.endTime}` : ""}
                   </p>
                 )}
                 {ev.notes && <p className="mt-0.5 ml-4 text-xs text-gray-400">{ev.notes}</p>}
