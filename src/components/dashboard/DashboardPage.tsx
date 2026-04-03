@@ -351,7 +351,7 @@ export default function DashboardPage() {
 
         {/* Upcoming Interview */}
         {nextInterview ? (() => {
-          const totalInterviews = upcomingEvents.filter((ev) => ev.category === "interview").length;
+          const totalInterviews = futureEvents.filter((ev) => ev.category === "interview").length;
           const moreCount = totalInterviews - 1;
           return (
           <Link href={nextInterview.companyId ? `/companies/${nextInterview.companyId}` : "/companies"}>
