@@ -63,6 +63,10 @@ export default function ApplicationsPage() {
   const [newSavedRole, setNewSavedRole] = useState("");
   const [newSavedDeadline, setNewSavedDeadline] = useState("");
   const [newSavedMethod, setNewSavedMethod] = useState("");
+  const [savedSearch, setSavedSearch] = useState("");
+  const [savedColumnFilters, setSavedColumnFilters] = useState<Record<string, string>>({});
+  const [savedActiveFilter, setSavedActiveFilter] = useState<string | null>(null);
+  const [savedFilterSearch, setSavedFilterSearch] = useState("");
   const [newSavedUrl, setNewSavedUrl] = useState("");
   const [newSavedNotes, setNewSavedNotes] = useState("");
   const [showAddSaved, setShowAddSaved] = useState(false);
@@ -97,6 +101,20 @@ export default function ApplicationsPage() {
 
   const displayedApps = filtered.slice(0, visibleCount);
   const hasMore = filtered.length > visibleCount;
+
+  const filteredSaved = useMemo(() => {
+    let result = state.savedPositions;
+    if (savedSearch) {
+      const q = savedSearch.toLowerCase();
+      result = result.filter((p) => p.company.toLowerCase().includes(q) || p.role.toLowerCase().includes(q));
+    }
+    Object.entries(savedColumnFilters).forEach(([key, value]) => {
+      if (value) {
+        result = result.filter((p) => (p as unknown as Record<string, string>)[key]?.toLowerCase() === value.toLowerCase());
+      }
+    });
+    return result;
+  }, [state.savedPositions, savedSearch, savedColumnFilters]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -465,15 +483,76 @@ export default function ApplicationsPage() {
         </>
       )}
 
-      {tab === "saved" && (
+      {tab === "saved" && (() => {
+        const savedColumns = [
+          { key: "company", label: "Company", width: "w-40" },
+          { key: "role", label: "Role", width: "w-52" },
+          { key: "method", label: "Method", width: "w-32" },
+        ];
+        return (
         <>
+          <div className="mb-4 flex gap-3">
+            <input type="text" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)}
+              placeholder="Search company or role..."
+              className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+          </div>
+          {Object.entries(savedColumnFilters).filter(([, v]) => v).length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-400">Filters:</span>
+              {Object.entries(savedColumnFilters).filter(([, v]) => v).map(([key, value]) => (
+                <button key={key} onClick={() => setSavedColumnFilters((prev) => ({ ...prev, [key]: "" }))}
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
+                  {value}
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))}
+              <button onClick={() => setSavedColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
+            </div>
+          )}
+          <p className="mb-2 text-xs text-gray-400">{filteredSaved.length} positions</p>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-32">Method</th>
+                  {savedColumns.map((col) => (
+                    <th key={col.key} className={`${col.width} select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 relative`}>
+                      <div className="flex items-center gap-1">
+                        <span>{col.label}</span>
+                        <button onClick={() => setSavedActiveFilter(savedActiveFilter === col.key ? null : col.key)}
+                          className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${savedColumnFilters[col.key] ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                          </svg>
+                        </button>
+                      </div>
+                      {savedActiveFilter === col.key && (() => {
+                        const allVals = Array.from(new Set(state.savedPositions.map((p) => (p as unknown as Record<string, string>)[col.key]).filter(Boolean))).sort();
+                        const fq = savedFilterSearch.toLowerCase();
+                        const filteredVals = fq ? allVals.filter((v) => v.toLowerCase().includes(fq)) : allVals;
+                        return (<>
+                          <div className="fixed inset-0 z-30" onClick={() => { setSavedActiveFilter(null); setSavedFilterSearch(""); }} />
+                          <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
+                            <div className="p-1.5">
+                              <input value={savedFilterSearch} onChange={(e) => setSavedFilterSearch(e.target.value)} autoFocus
+                                placeholder="Search..." className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto px-1 pb-1">
+                              {filteredVals.map((val) => (
+                                <button key={val} onClick={() => {
+                                  setSavedColumnFilters((prev) => ({ ...prev, [col.key]: prev[col.key] === val ? "" : val }));
+                                  setSavedActiveFilter(null); setSavedFilterSearch("");
+                                }} className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${savedColumnFilters[col.key] === val ? "text-indigo-600 font-medium" : "text-gray-600"}`}>
+                                  {val}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>);
+                      })()}
+                    </th>
+                  ))}
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Link</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-48">Notes</th>
                   <th className="w-24" />
@@ -518,7 +597,7 @@ export default function ApplicationsPage() {
                   </td>
                   <td />
                 </tr>
-                {state.savedPositions.map((pos) => {
+                {filteredSaved.map((pos) => {
                   const isEditing = (field: string) => editingSavedCell?.id === pos.id && editingSavedCell.field === field;
                   const startSavedEdit = (field: string, value: string) => { setEditingSavedCell({ id: pos.id, field }); setEditSavedValue(value); };
                   const saveSavedEdit = () => {
@@ -593,12 +672,12 @@ export default function ApplicationsPage() {
                 })}
               </tbody>
             </table>
-            {state.savedPositions.length === 0 && (
-              <div className="py-12 text-center text-sm text-gray-400">No saved positions. Add one above.</div>
+            {filteredSaved.length === 0 && (
+              <div className="py-12 text-center text-sm text-gray-400">{state.savedPositions.length === 0 ? "No saved positions. Add one above." : "No positions match your search."}</div>
             )}
           </div>
-        </>
-      )}
+        </>);
+      })()}
       {/* Delete confirmation */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
