@@ -1055,6 +1055,11 @@ export default function DashboardPage() {
                 ) : listMode === "chrono" ? (
                   <div className="space-y-2">
                     {upcomingEvents.map((ev) => renderEvent(ev, true))}
+                    <div className="flex items-center gap-4 pt-2 text-xs text-gray-400">
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Interview</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /> Practice</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> Networking</span>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">

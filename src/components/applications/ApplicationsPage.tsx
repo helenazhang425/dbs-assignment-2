@@ -238,6 +238,57 @@ export default function ApplicationsPage() {
         <Button variant="secondary" onClick={handleExport}>Export CSV</Button>
       </div>
 
+      {/* Summary stats with donut charts */}
+      {(() => {
+        const total = state.applications.length;
+        const stats = [
+          { label: "No Update", count: state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length, color: "#60a5fa" },
+          { label: "In Process", count: state.applications.filter((a) => a.verdict.toLowerCase() === "in process").length, color: "#f59e0b" },
+          { label: "Rejected", count: state.applications.filter((a) => a.verdict.toLowerCase().includes("rejected")).length, color: "#ef4444" },
+          { label: "Withdrew", count: state.applications.filter((a) => a.verdict.toLowerCase() === "withdrew").length, color: "#a855f7" },
+          { label: "No Opening", count: state.applications.filter((a) => a.verdict.toLowerCase() === "no opening").length, color: "#9ca3af" },
+        ].filter((s) => s.count > 0);
+        const size = 56;
+        const stroke = 5;
+        const radius = (size - stroke) / 2;
+        const circumference = 2 * Math.PI * radius;
+        return (
+          <div className="mb-6 flex flex-wrap gap-4 justify-center sm:justify-start">
+            {/* Total donut */}
+            <div className="flex flex-col items-center">
+              <div className="relative" style={{ width: size, height: size }}>
+                <svg width={size} height={size} className="-rotate-90">
+                  <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+                  <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#6366f1" strokeWidth={stroke}
+                    strokeDasharray={circumference} strokeDashoffset={0} strokeLinecap="round" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">{total}</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Total</p>
+            </div>
+            {stats.map((s) => {
+              const pct = total > 0 ? Math.round((s.count / total) * 100) : 0;
+              const offset = circumference - (pct / 100) * circumference;
+              return (
+                <div key={s.label} className="flex flex-col items-center">
+                  <div className="relative" style={{ width: size, height: size }}>
+                    <svg width={size} height={size} className="-rotate-90">
+                      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+                      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={s.color} strokeWidth={stroke}
+                        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+                        className="transition-all duration-500" />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">{s.count}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">{s.label}</p>
+                  <p className="text-xs text-gray-400">{pct}%</p>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Tabs */}
       <div className="mb-4 flex gap-1 border-b border-gray-200">
         <button

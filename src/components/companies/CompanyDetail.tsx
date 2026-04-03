@@ -272,14 +272,6 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
               <span className="font-medium text-gray-900">{companyEvents.length}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Questions asked</span>
-              <span className="font-medium text-gray-900">{companyEvents.reduce((sum, ev) => sum + ev.questionsAsked.length, 0)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Questions to prep</span>
-              <span className="font-medium text-gray-900">{companyEvents.reduce((sum, ev) => sum + ev.questionsToAsk.length, 0)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
               <span className="text-gray-500">Prep tasks</span>
               <span className="font-medium text-gray-900">
                 {state.checklist.filter((t) => companyEvents.some((ev) => ev.id === t.eventId)).filter((t) => t.completed).length}
