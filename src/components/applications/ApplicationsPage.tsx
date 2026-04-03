@@ -322,11 +322,16 @@ export default function ApplicationsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-gray-500">
                       {editingCell?.id === app.id && editingCell.field === "appliedDate" ? (
-                        <input type="date" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={handleKeyDown} autoFocus
-                          className="rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={handleKeyDown} autoFocus
+                          placeholder="YYYY-MM-DD or YYYY"
+                          className="w-28 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
                       ) : (
                         <span onClick={() => startEdit(app.id, "appliedDate", app.appliedDate)} className="cursor-pointer">
-                          {app.appliedDate ? new Date(app.appliedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—"}
+                          {app.appliedDate
+                            ? app.appliedDate.length === 4
+                              ? app.appliedDate
+                              : new Date(app.appliedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
+                            : "—"}
                         </span>
                       )}
                     </td>
@@ -340,10 +345,20 @@ export default function ApplicationsPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       {editingCell?.id === app.id && editingCell.field === "verdict" ? (
-                        <select value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={saveEdit} autoFocus
-                          className="rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none">
-                          {VERDICTS.map((v) => <option key={v} value={v}>{v}</option>)}
-                        </select>
+                        <div className="flex flex-wrap gap-1">
+                          {VERDICTS.map((v) => (
+                            <button key={v}
+                              onClick={() => {
+                                dispatch({ type: "UPDATE_APPLICATION", payload: { id: app.id, updates: { verdict: v } } });
+                                setEditingCell(null);
+                              }}
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                                editValue === v ? getVerdictClass(v) + " ring-2 ring-indigo-400" : getVerdictClass(v) + " opacity-50 hover:opacity-80"
+                              }`}>
+                              {v}
+                            </button>
+                          ))}
+                        </div>
                       ) : (
                         <span onClick={() => startEdit(app.id, "verdict", app.verdict)}
                           className={`cursor-pointer inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(app.verdict)}`}>
