@@ -21,6 +21,9 @@ export default function DashboardPage() {
   });
   const [showPrepSearch, setShowPrepSearch] = useState(false);
   const [prepSearchQuery, setPrepSearchQuery] = useState("");
+  const [showTzPicker, setShowTzPicker] = useState(false);
+  const [tzSearch, setTzSearch] = useState("");
+  const [displayTz, setDisplayTz] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -635,7 +638,69 @@ export default function DashboardPage() {
         {/* Right: Schedule */}
         <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
+              <div className="relative">
+                <button onClick={() => { setShowTzPicker(!showTzPicker); setTzSearch(""); }}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                  {displayTz.split("/").pop()?.replace(/_/g, " ")}
+                </button>
+                {showTzPicker && (
+                  <div className="absolute z-20 mt-1 left-0 w-56 rounded-lg border border-gray-200 bg-white shadow-lg p-2">
+                    <input value={tzSearch} onChange={(e) => setTzSearch(e.target.value)} autoFocus
+                      placeholder="Search city..."
+                      className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none mb-1" />
+                    <div className="max-h-40 overflow-y-auto">
+                      {(() => {
+                        const cities: Record<string, string> = {
+                          "Chicago": "America/Chicago",
+                          "New York": "America/New_York",
+                          "Los Angeles": "America/Los_Angeles",
+                          "San Francisco": "America/Los_Angeles",
+                          "Denver": "America/Denver",
+                          "Phoenix": "America/Phoenix",
+                          "Anchorage": "America/Anchorage",
+                          "Honolulu": "Pacific/Honolulu",
+                          "London": "Europe/London",
+                          "Paris": "Europe/Paris",
+                          "Berlin": "Europe/Berlin",
+                          "Tokyo": "Asia/Tokyo",
+                          "Shanghai": "Asia/Shanghai",
+                          "Beijing": "Asia/Shanghai",
+                          "Mumbai": "Asia/Kolkata",
+                          "Dubai": "Asia/Dubai",
+                          "Sydney": "Australia/Sydney",
+                          "Toronto": "America/Toronto",
+                          "Vancouver": "America/Vancouver",
+                          "Seattle": "America/Los_Angeles",
+                          "Boston": "America/New_York",
+                          "Austin": "America/Chicago",
+                          "Dallas": "America/Chicago",
+                          "Houston": "America/Chicago",
+                          "Atlanta": "America/New_York",
+                          "Miami": "America/New_York",
+                          "Detroit": "America/Detroit",
+                          "Minneapolis": "America/Chicago",
+                        };
+                        const q = tzSearch.toLowerCase();
+                        const matches = Object.entries(cities).filter(([city]) => city.toLowerCase().includes(q));
+                        return matches.length > 0 ? matches.map(([city, tz]) => (
+                          <button key={city} onClick={() => { setDisplayTz(tz); setShowTzPicker(false); }}
+                            className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-indigo-50 ${displayTz === tz ? "text-indigo-600 font-medium" : "text-gray-600"}`}>
+                            {city} <span className="text-gray-400">({tz.split("/").pop()?.replace(/_/g, " ")})</span>
+                          </button>
+                        )) : (
+                          <p className="px-2 py-1.5 text-xs text-gray-400">No matches</p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg border border-gray-200">
                 {(["list", "week", "month"] as const).map((view) => (
@@ -1178,29 +1243,6 @@ export default function DashboardPage() {
           </>);
           })()}
         </div>
-      </div>
-
-      {/* Timezone */}
-      <div className="mt-6 flex justify-end">
-        <button
-          onClick={() => {
-            const tz = prompt("Enter timezone (e.g., America/Chicago, America/New_York, America/Los_Angeles):", Intl.DateTimeFormat().resolvedOptions().timeZone);
-            if (tz) {
-              try {
-                Intl.DateTimeFormat(undefined, { timeZone: tz });
-                alert(`Timezone display updated. Note: in-memory app cannot persist this change across refreshes.`);
-              } catch {
-                alert("Invalid timezone. Please use a valid IANA timezone like America/Chicago");
-              }
-            }
-          }}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-          </svg>
-          {Intl.DateTimeFormat().resolvedOptions().timeZone}
-        </button>
       </div>
 
       {/* Add Event Modal */}
