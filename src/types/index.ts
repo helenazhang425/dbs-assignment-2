@@ -35,12 +35,15 @@ export interface Company {
   createdAt: number;
 }
 
+export type RecurringFrequency = "daily" | "weekly" | null;
+
 export interface ChecklistItem {
   id: string;
   text: string;
   completed: boolean;
-  dueDate: string; // ISO date string or "" for no due date
-  companyId: string | null; // null = general to-do, string = tied to a company interview
+  dueDate: string;
+  companyId: string | null;
+  recurring: RecurringFrequency;
   createdAt: number;
 }
 

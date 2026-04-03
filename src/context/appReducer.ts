@@ -11,7 +11,7 @@ export type AppAction =
   | { type: "UPDATE_COMPANY"; payload: { id: string; updates: Partial<Company> } }
   | { type: "DELETE_COMPANY"; payload: { id: string } }
   // Checklist
-  | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null } }
+  | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null; recurring?: "daily" | "weekly" | null } }
   | { type: "TOGGLE_CHECKLIST_ITEM"; payload: { id: string } }
   | { type: "UPDATE_CHECKLIST_ITEM"; payload: { id: string; updates: Partial<ChecklistItem> } }
   | { type: "DELETE_CHECKLIST_ITEM"; payload: { id: string } }
@@ -111,6 +111,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             completed: false,
             dueDate: action.payload.dueDate ?? "",
             companyId: action.payload.companyId ?? null,
+            recurring: action.payload.recurring ?? null,
             createdAt: Date.now(),
           },
         ],

@@ -12,8 +12,11 @@ export default function DashboardPage() {
   const [newItem, setNewItem] = useState("");
   const [newItemDate, setNewItemDate] = useState("");
   const [calendarView, setCalendarView] = useState<"list" | "week" | "month">("list");
+  const [listMode, setListMode] = useState<"chrono" | "bytype">("chrono");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Event form state
@@ -42,16 +45,18 @@ export default function DashboardPage() {
 
   // Next interview event
   const upcomingEvents = state.events
-    .filter((ev) => new Date(ev.date) >= today)
+    .filter((ev) => new Date(ev.date + "T12:00:00") >= today)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const nextInterview = upcomingEvents.find((ev) => ev.category === "interview");
 
-  // Interviews this week
+  // Events this week
   const endOfWeek = new Date(today);
   endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
-  const interviewsThisWeek = state.events.filter(
-    (ev) => ev.category === "interview" && new Date(ev.date) >= today && new Date(ev.date) <= endOfWeek
-  ).length;
+  const eventsThisWeek = state.events.filter(
+    (ev) => new Date(ev.date + "T12:00:00") >= today && new Date(ev.date + "T12:00:00") <= endOfWeek
+  );
+  const interviewsThisWeek = eventsThisWeek.filter((ev) => ev.category === "interview").length;
+  const practiceThisWeek = eventsThisWeek.filter((ev) => ev.category === "practice").length;
 
   // Last practiced
   const practicedQuestions = state.questions.filter((q) => q.practiced);
@@ -146,8 +151,9 @@ export default function DashboardPage() {
   // ---- Calendar helpers ----
   function getCalendarMonth() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const year = target.getFullYear();
+    const month = target.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     return { year, month, firstDay, daysInMonth };
@@ -177,32 +183,18 @@ export default function DashboardPage() {
   const monthName = new Date(year, month).toLocaleString("en-US", { month: "long", year: "numeric" });
   const weekDates = getWeekDates();
 
-  // Application stats (derived from applications array)
-  const verdictConfig: { verdict: string; label: string; color: string }[] = [
-    { verdict: "No Update", label: "No Update", color: "bg-amber-400" },
-    { verdict: "Rejected without interview", label: "Rejected - No Interview", color: "bg-red-300" },
-    { verdict: "Rejected without Interview", label: "Rejected - No Interview", color: "bg-red-300" },
-    { verdict: "Rejected - 1st Round", label: "Rejected - 1st Round", color: "bg-red-400" },
-    { verdict: "Rejected - Complete Process", label: "Rejected - Complete", color: "bg-red-500" },
-    { verdict: "No Opening", label: "No Opening", color: "bg-gray-300" },
-    { verdict: "Withdrew", label: "Withdrew", color: "bg-purple-400" },
-    { verdict: "Offer", label: "Offer", color: "bg-green-500" },
-  ];
-  const verdictCounts = new Map<string, { label: string; color: string; count: number }>();
-  for (const app of state.applications) {
-    const cfg = verdictConfig.find((v) => v.verdict.toLowerCase() === app.verdict.toLowerCase());
-    const label = cfg?.label ?? app.verdict;
-    const color = cfg?.color ?? "bg-gray-400";
-    const existing = verdictCounts.get(label);
-    if (existing) {
-      existing.count++;
-    } else {
-      verdictCounts.set(label, { label, color, count: 1 });
-    }
-  }
-  const appStatRows = Array.from(verdictCounts.values())
-    .sort((a, b) => b.count - a.count);
+  // Application stats — simplified into 3 buckets
   const totalApplications = state.applications.length;
+  const rejectedVerdicts = ["rejected without interview", "rejected - 1st round", "rejected - complete process"];
+  const inProcessVerdicts = ["offer", "no opening", "withdrew", "in process"];
+  const appNoUpdate = state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length;
+  const appRejected = state.applications.filter((a) => rejectedVerdicts.includes(a.verdict.toLowerCase())).length;
+  const appInProcess = state.applications.filter((a) => inProcessVerdicts.includes(a.verdict.toLowerCase())).length;
+  const appStatRows = [
+    { label: "No Update", count: appNoUpdate, color: "bg-amber-400" },
+    { label: "Rejected", count: appRejected, color: "bg-red-400" },
+    { label: "In Process", count: appInProcess, color: "bg-blue-500" },
+  ].filter((r) => r.count > 0);
 
   // Selected date events
   const selectedDateEvents = selectedDate ? getEventsForDateStr(selectedDate) : [];
@@ -213,9 +205,12 @@ export default function DashboardPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
-          {interviewsThisWeek > 0
-            ? `You have ${interviewsThisWeek} interview${interviewsThisWeek > 1 ? "s" : ""} this week — keep it up!`
-            : "No interviews this week — keep prepping!"}
+          {eventsThisWeek.length > 0
+            ? `You have ${eventsThisWeek.length} event${eventsThisWeek.length > 1 ? "s" : ""} this week${
+                interviewsThisWeek > 0 ? ` — ${interviewsThisWeek} interview${interviewsThisWeek > 1 ? "s" : ""}` : ""
+              }${practiceThisWeek > 0 ? `${interviewsThisWeek > 0 ? "," : " —"} ${practiceThisWeek} practice` : ""
+              }. Keep it up!`
+            : "No events this week — keep prepping!"}
         </p>
       </div>
 
@@ -223,7 +218,7 @@ export default function DashboardPage() {
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Pipeline */}
         <Link href="/applications">
-          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Applications</p>
               <p className="text-xs text-gray-400">{totalApplications} total</p>
@@ -233,12 +228,12 @@ export default function DashboardPage() {
                 {appStatRows.map((row) => {
                   const pct = Math.round((row.count / totalApplications) * 100);
                   return (
-                    <div key={row.label} className="flex items-center gap-3">
-                      <span className="w-40 text-xs text-gray-600 truncate">{row.label}</span>
-                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div className={`h-full rounded-full ${row.color}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+                    <div key={row.label} className="flex items-center gap-2">
+                      <span className="w-20 text-xs text-gray-600 truncate">{row.label}</span>
+                      <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${row.color}`} style={{ width: `${Math.max(pct, 3)}%` }} />
                       </div>
-                      <span className="w-16 text-right text-xs text-gray-500">{row.count} ({pct}%)</span>
+                      <span className="w-14 text-right text-xs text-gray-500">{pct}%</span>
                     </div>
                   );
                 })}
@@ -252,19 +247,21 @@ export default function DashboardPage() {
 
         {/* Upcoming Interview */}
         {nextInterview ? (
-          <div className="h-full rounded-xl border border-gray-200 bg-white p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
-            <p className="mt-3 text-sm font-semibold text-gray-900">{nextInterview.title}</p>
-            {nextInterview.startTime && (
-              <p className="mt-0.5 text-xs text-gray-500">
-                {nextInterview.startTime}{nextInterview.endTime ? ` — ${nextInterview.endTime}` : ""}
+          <Link href={nextInterview.companyId ? `/companies/${nextInterview.companyId}` : "/companies"}>
+            <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
+              <p className="mt-3 text-sm font-semibold text-gray-900">{nextInterview.title}</p>
+              {nextInterview.startTime && (
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {nextInterview.startTime}{nextInterview.endTime ? ` — ${nextInterview.endTime}` : ""}
+                </p>
+              )}
+              <p className="mt-1 text-lg font-bold text-indigo-600">{daysUntil(nextInterview.date)}</p>
+              <p className="text-xs text-gray-400">
+                {new Date(nextInterview.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
               </p>
-            )}
-            <p className="mt-1 text-lg font-bold text-indigo-600">{daysUntil(nextInterview.date)}</p>
-            <p className="text-xs text-gray-400">
-              {new Date(nextInterview.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            </p>
-          </div>
+            </div>
+          </Link>
         ) : (
           <div className="h-full rounded-xl border border-gray-200 bg-white p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Upcoming Interview</p>
@@ -275,7 +272,7 @@ export default function DashboardPage() {
 
         {/* Unresolved Feedback */}
         <Link href="/stories">
-          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Story Feedback</p>
             {unresolvedFeedback > 0 ? (
               <>
@@ -293,7 +290,7 @@ export default function DashboardPage() {
 
         {/* To Apply */}
         <Link href="/applications">
-          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">To Apply</p>
             <p className="mt-3 text-2xl font-bold text-indigo-600">{state.savedPositions.length}</p>
             <p className="text-xs text-gray-400">
@@ -345,7 +342,7 @@ export default function DashboardPage() {
                 />
                 <span
                   onClick={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: item.id } })}
-                  className={`flex-1 text-sm cursor-pointer select-none ${item.completed ? "text-gray-400 line-through" : "text-gray-700"}`}
+                  className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${item.completed ? "text-gray-400 line-through opacity-60" : "text-gray-700"}`}
                 >
                   {item.text}
                 </span>
@@ -393,65 +390,152 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {calendarView === "list" && (
-            <div className="space-y-3">
-              {upcomingEvents.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-400">No upcoming events</p>
-              ) : (
-                upcomingEvents.map((ev) => {
-                  const eventTasks = ev.companyId ? state.checklist.filter((i) => i.companyId === ev.companyId) : [];
-                  const tasksDone = eventTasks.filter((i) => i.completed).length;
-                  return (
-                    <div key={ev.id} className="rounded-lg border border-gray-100 px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{ev.title}</p>
-                          {ev.startTime && (
-                            <p className="mt-0.5 text-xs text-gray-500">
-                              {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
-                            </p>
-                          )}
-                          {ev.notes && <p className="mt-0.5 text-xs text-gray-400 truncate">{ev.notes}</p>}
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-xs font-medium text-indigo-600">{daysUntil(ev.date)}</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </p>
-                        </div>
-                      </div>
-                      {eventTasks.length > 0 && (
-                        <div className="mt-2 ml-5 border-t border-gray-50 pt-2">
-                          <p className="mb-1.5 text-xs text-gray-400">{tasksDone}/{eventTasks.length} prep tasks</p>
-                          <div className="space-y-1">
-                            {eventTasks.map((task) => (
-                              <div key={task.id} className="flex items-center gap-2">
-                                <input type="checkbox" checked={task.completed}
-                                  onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <span
-                                  onClick={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                                  className={`text-sm cursor-pointer select-none ${task.completed ? "text-gray-400 line-through" : "text-gray-600"}`}
-                                >
-                                  {task.text}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+          {calendarView === "list" && (() => {
+            const practiceEvents = upcomingEvents.filter((ev) => ev.category === "practice");
+            const interviewEvents = upcomingEvents.filter((ev) => ev.category === "interview");
+
+            const typeLabel = (ev: typeof upcomingEvents[0]) => {
+              if (ev.category === "practice" && ev.interviewType) {
+                return ev.interviewType === "case" ? "Case" : ev.interviewType === "behavioral" ? "Behavioral" : null;
+              }
+              return null;
+            };
+
+            const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
+              const eventTasks = ev.companyId ? state.checklist.filter((i) => i.companyId === ev.companyId) : [];
+              const tasksDone = eventTasks.filter((i) => i.completed).length;
+              const badge = typeLabel(ev);
+              const isEditing = editingEventId === ev.id;
+
+              if (isEditing) {
+                return (
+                  <div key={ev.id} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-2">
+                    <input defaultValue={ev.title}
+                      onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { title: e.target.value } } })}
+                      className="w-full rounded border border-gray-200 px-2 py-1 text-sm font-medium focus:border-indigo-400 focus:outline-none" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="date" defaultValue={ev.date}
+                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { date: e.target.value } } })}
+                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                      <input type="time" defaultValue={ev.startTime}
+                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { startTime: e.target.value } } })}
+                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                      <input type="time" defaultValue={ev.endTime}
+                        onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { endTime: e.target.value } } })}
+                        className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
                     </div>
-                  );
-                })
-              )}
-              <div className="flex items-center gap-4 pt-2 text-xs text-gray-400">
-                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Interview</span>
-                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /> Practice</span>
+                    <input defaultValue={ev.notes} placeholder="Notes"
+                      onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { notes: e.target.value } } })}
+                      className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                    <div className="flex items-center justify-between pt-1">
+                      <button onClick={() => { dispatch({ type: "DELETE_EVENT", payload: { id: ev.id } }); setEditingEventId(null); }}
+                        className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                      <button onClick={() => setEditingEventId(null)}
+                        className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Done</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={ev.id} onClick={() => setEditingEventId(ev.id)}
+                  className="cursor-pointer rounded-lg border border-gray-100 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors">
+                  <div className="flex items-start gap-2">
+                    {showDot && (
+                      <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900">{ev.title}</p>
+                        {badge && (
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            badge === "Case" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
+                          }`}>{badge}</span>
+                        )}
+                      </div>
+                      {ev.startTime && (
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
+                        </p>
+                      )}
+                      {ev.notes && <p className="mt-0.5 text-xs text-gray-400 truncate">{ev.notes}</p>}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-medium text-indigo-600">{daysUntil(ev.date)}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                  {eventTasks.length > 0 && (
+                    <div className="mt-2 border-t border-gray-50 pt-2" onClick={(e) => e.stopPropagation()}>
+                      <p className="mb-1.5 text-xs text-gray-400">{tasksDone}/{eventTasks.length} prep tasks</p>
+                      <div className="space-y-1">
+                        {eventTasks.map((task) => (
+                          <div key={task.id} className="flex items-center gap-2">
+                            <input type="checkbox" checked={task.completed}
+                              onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                            <span onClick={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
+                              className={`text-sm cursor-pointer select-none ${task.completed ? "text-gray-400 line-through" : "text-gray-600"}`}>
+                              {task.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <div>
+                {/* Sub-toggle */}
+                <div className="mb-3 flex rounded-lg border border-gray-200 w-fit">
+                  <button onClick={() => setListMode("chrono")}
+                    className={`px-3 py-1 text-xs font-medium rounded-l-lg ${listMode === "chrono" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-50"}`}>
+                    Chronological
+                  </button>
+                  <button onClick={() => setListMode("bytype")}
+                    className={`px-3 py-1 text-xs font-medium rounded-r-lg ${listMode === "bytype" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-50"}`}>
+                    By Type
+                  </button>
+                </div>
+
+                {upcomingEvents.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-gray-400">No upcoming events</p>
+                ) : listMode === "chrono" ? (
+                  <div className="space-y-2">
+                    {upcomingEvents.map((ev) => renderEvent(ev, true))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+                        <span className="h-2 w-2 rounded-full bg-green-500" /> Practice
+                      </p>
+                      <div className="space-y-2">
+                        {practiceEvents.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-gray-300">No practice sessions</p>
+                        ) : practiceEvents.map((ev) => renderEvent(ev))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+                        <span className="h-2 w-2 rounded-full bg-indigo-500" /> Interviews
+                      </p>
+                      <div className="space-y-2">
+                        {interviewEvents.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-gray-300">No upcoming interviews</p>
+                        ) : interviewEvents.map((ev) => renderEvent(ev))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {calendarView === "week" && (
             <div>
@@ -520,7 +604,8 @@ export default function DashboardPage() {
                                 : "bg-green-100 text-green-700"
                             }`}
                           >
-                            {ev.title.length > 12 ? ev.title.slice(0, 12) + "…" : ev.title}
+                            {ev.startTime && <span className="font-normal opacity-75">{ev.startTime} </span>}
+                            {ev.title.length > 10 ? ev.title.slice(0, 10) + "…" : ev.title}
                           </div>
                         ))}
                       </div>
@@ -542,7 +627,27 @@ export default function DashboardPage() {
 
           {calendarView === "month" && (
             <div>
-              <p className="mb-3 text-sm font-medium text-gray-700">{monthName}</p>
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={() => setMonthOffset((o) => o - 1)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-700">{monthName}</p>
+                  {monthOffset !== 0 && (
+                    <button onClick={() => setMonthOffset(0)}
+                      className="rounded px-2 py-0.5 text-xs text-indigo-500 hover:bg-indigo-50">Today</button>
+                  )}
+                </div>
+                <button onClick={() => setMonthOffset((o) => o + 1)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
               <div className="grid grid-cols-7 gap-1 text-center">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
                   <div key={d} className="py-2 text-xs font-medium text-gray-400">{d}</div>
@@ -723,7 +828,7 @@ function SelectedDatePanel({
         <p className="mt-2 text-sm text-gray-400">No events this day</p>
       ) : (
         <div className="mt-3 space-y-3">
-          {(events as { id: string; title: string; category: string; notes: string; companyId: string | null }[]).map((ev) => {
+          {(events as { id: string; title: string; category: string; startTime?: string; endTime?: string; notes: string; companyId: string | null }[]).map((ev) => {
             const tasks = ev.companyId ? checklist.filter((i) => i.companyId === ev.companyId) : [];
             return (
               <div key={ev.id} className="rounded-lg bg-white p-3 border border-gray-100">
@@ -734,7 +839,12 @@ function SelectedDatePanel({
                     ev.category === "interview" ? "bg-indigo-100 text-indigo-700" : "bg-green-100 text-green-700"
                   }`}>{ev.category}</span>
                 </div>
-                {ev.notes && <p className="mt-1 ml-4 text-xs text-gray-500">{ev.notes}</p>}
+                {ev.startTime && (
+                  <p className="mt-1 ml-4 text-xs text-gray-500">
+                    {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
+                  </p>
+                )}
+                {ev.notes && <p className="mt-0.5 ml-4 text-xs text-gray-400">{ev.notes}</p>}
                 {tasks.length > 0 && (
                   <div className="mt-2 ml-4 space-y-1">
                     {tasks.map((task) => (
