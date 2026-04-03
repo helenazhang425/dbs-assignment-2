@@ -770,7 +770,7 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
           {hovered ? (
             <span className="text-xl font-bold" style={{ color: hovered.color }}>{hovered.count}</span>
           ) : (
-            <span className="text-lg font-bold text-gray-300">&nbsp;</span>
+            <span className="text-xl font-bold text-gray-900">{total}</span>
           )}
         </div>
       </div>
