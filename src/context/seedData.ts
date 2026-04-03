@@ -427,7 +427,7 @@ export const seedData: AppState = {
     { id: "a139", company: "Strava", role: "Senior Biz Analyst", appliedDate: "2026-03-27", method: "Company Website", location: "", verdict: "No Update", notes: "", spokeTo: "", createdAt: Date.now() },
     { id: "a140", company: "Sutter Health", role: "Innovation Strategist, Design & Innovation", appliedDate: "2026-03-27", method: "Company Website", location: "", verdict: "No Update", notes: "", spokeTo: "", createdAt: Date.now() },
     { id: "a141", company: "Synapse Health", role: "CoS", appliedDate: "2026-03-27", method: "Company Website", location: "", verdict: "No Update", notes: "", spokeTo: "", createdAt: Date.now() },
-    { id: "a142", company: "Tandem", role: "S&O Lead", appliedDate: "2026-03-27", method: "Referral - Madison Mok", location: "", verdict: "In Process", notes: "first round - 4/2", spokeTo: "", createdAt: Date.now() },
+    { id: "a142", company: "Tandem", role: "S&O Lead", appliedDate: "2026-03-27", method: "Referral", location: "", verdict: "In Process", notes: "Referrer: Madison Mok. First round - 4/2", spokeTo: "", createdAt: Date.now() },
     { id: "a143", company: "Tempus", role: "PM", appliedDate: "2026-03-27", method: "Company Website", location: "", verdict: "No Update", notes: "", spokeTo: "", createdAt: Date.now() },
     { id: "a144", company: "TikTok", role: "Product S&O Mgr, Acquisition Gorwth", appliedDate: "2026-03-27", method: "Linkedin", location: "", verdict: "Rejected without Interview", notes: "", spokeTo: "", createdAt: Date.now() },
     { id: "a145", company: "Visa", role: "Sr Mgr - Visa Ventures", appliedDate: "2026-03-27", method: "GTS", location: "", verdict: "No Update", notes: "", spokeTo: "", createdAt: Date.now() },

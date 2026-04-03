@@ -47,6 +47,8 @@ export default function ApplicationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingSavedCell, setEditingSavedCell] = useState<{ id: string; field: string } | null>(null);
+  const [editSavedValue, setEditSavedValue] = useState("");
 
   // New application row
   const [newCompany, setNewCompany] = useState("");
@@ -510,23 +512,55 @@ export default function ApplicationsPage() {
                   </td>
                   <td />
                 </tr>
-                {state.savedPositions.map((pos) => (
+                {state.savedPositions.map((pos) => {
+                  const isEditing = (field: string) => editingSavedCell?.id === pos.id && editingSavedCell.field === field;
+                  const startSavedEdit = (field: string, value: string) => { setEditingSavedCell({ id: pos.id, field }); setEditSavedValue(value); };
+                  const saveSavedEdit = () => {
+                    if (editingSavedCell) {
+                      dispatch({ type: "UPDATE_SAVED_POSITION", payload: { id: pos.id, updates: { [editingSavedCell.field]: editSavedValue } } });
+                      setEditingSavedCell(null);
+                    }
+                  };
+                  const savedKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") saveSavedEdit(); if (e.key === "Escape") setEditingSavedCell(null); };
+                  return (
                   <tr key={pos.id} className="group hover:bg-gray-50">
                     <td className="px-4 py-2.5">
-                      <span className="text-sm font-medium text-gray-900">{pos.company}</span>
+                      {isEditing("company") ? (
+                        <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
+                          className="w-full rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                      ) : (
+                        <span onClick={() => startSavedEdit("company", pos.company)} className="cursor-pointer text-sm font-medium text-gray-900">{pos.company}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <span className="text-sm text-gray-600">{pos.role}</span>
+                      {isEditing("role") ? (
+                        <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
+                          className="w-full rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                      ) : (
+                        <span onClick={() => startSavedEdit("role", pos.role)} className="cursor-pointer text-sm text-gray-600">{pos.role || "—"}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <span className="text-sm text-gray-500">{pos.method || "—"}</span>
+                      {isEditing("method") ? (
+                        <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
+                          className="w-full rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                      ) : (
+                        <span onClick={() => startSavedEdit("method", pos.method)} className="cursor-pointer text-sm text-gray-500">{pos.method || "—"}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
-                      {pos.url ? (
-                        <a href={pos.url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-500 hover:text-indigo-700 truncate block max-w-48">
-                          {pos.url}
-                        </a>
-                      ) : <span className="text-sm text-gray-400">—</span>}
+                      {isEditing("url") ? (
+                        <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
+                          placeholder="https://..."
+                          className="w-full rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                      ) : (
+                        pos.url ? (
+                          <a href={pos.url} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-500 hover:text-indigo-700 truncate block max-w-48"
+                            onClick={(e) => { e.preventDefault(); startSavedEdit("url", pos.url); }}>
+                            {pos.url}
+                          </a>
+                        ) : <span onClick={() => startSavedEdit("url", "")} className="cursor-pointer text-sm text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <Button size="sm" onClick={() => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id: pos.id } })}>
@@ -541,8 +575,8 @@ export default function ApplicationsPage() {
                         </svg>
                       </button>
                     </td>
-                  </tr>
-                ))}
+                  </tr>);
+                })}
               </tbody>
             </table>
             {state.savedPositions.length === 0 && (
