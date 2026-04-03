@@ -775,8 +775,22 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
         </div>
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-900">{total}</p>
-        <p className="text-sm text-gray-500">total applications</p>
+        <p className="text-2xl font-bold text-gray-900">{total} <span className="text-sm font-normal text-gray-500">total applications</span></p>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+          {segments.map((s) => {
+            const pct = total > 0 ? Math.round((s.count / total) * 100) : 0;
+            return (
+              <div key={s.label} className="flex items-center gap-1.5 cursor-default"
+                onMouseEnter={() => setHovered({ ...s, pct })}
+                onMouseLeave={() => setHovered(null)}>
+                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                <span className="text-xs text-gray-600">{s.label}</span>
+                <span className="text-xs font-medium text-gray-700">{s.count}</span>
+                <span className="text-xs text-gray-400">({pct}%)</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
       {/* Tooltip on mouse */}
       {hovered && (
