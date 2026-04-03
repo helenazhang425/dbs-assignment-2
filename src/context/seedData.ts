@@ -107,14 +107,21 @@ export const seedData: AppState = {
 
   checklist: [
     // General prep tasks
-    { id: "cl1", text: "Update resume", completed: true, dueDate: "", companyId: null, recurring: null, createdAt: Date.now() - 86400000 * 7 },
-    { id: "cl2", text: "Prepare 3 STAR stories", completed: false, dueDate: "2026-04-10", companyId: null, recurring: null, createdAt: Date.now() - 86400000 * 6 },
-    { id: "cl3", text: "Practice answering out loud", completed: false, dueDate: "", companyId: null, recurring: null, createdAt: Date.now() - 86400000 * 4 },
-    { id: "cl4", text: "Do a mock interview with a friend", completed: false, dueDate: "2026-04-09", companyId: null, recurring: null, createdAt: Date.now() - 86400000 * 2 },
+    { id: "cl1", text: "Update resume", completed: true, dueDate: "", companyId: null, recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 7 },
+    { id: "cl2", text: "Prepare 3 STAR stories", completed: false, dueDate: "2026-04-10", companyId: null, recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 6 },
+    { id: "cl3", text: "Practice answering out loud", completed: false, dueDate: "", companyId: null, recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 4 },
+    { id: "cl4", text: "Do a mock interview with a friend", completed: false, dueDate: "2026-04-09", companyId: null, recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 2 },
     // Company-specific prep tasks
-    { id: "cl5", text: "Research Google APM program", completed: false, dueDate: "2026-04-12", companyId: "c1", recurring: null, createdAt: Date.now() - 86400000 * 5 },
-    { id: "cl6", text: "Prepare questions for Google", completed: false, dueDate: "2026-04-14", companyId: "c1", recurring: null, createdAt: Date.now() - 86400000 * 3 },
-    { id: "cl7", text: "Review Google job description", completed: true, dueDate: "", companyId: "c1", recurring: null, createdAt: Date.now() - 86400000 * 6 },
+    { id: "cl5", text: "Research Google APM program", completed: false, dueDate: "2026-04-12", companyId: "c1", recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 5 },
+    { id: "cl6", text: "Prepare questions for Google", completed: false, dueDate: "2026-04-14", companyId: "c1", recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 3 },
+    { id: "cl7", text: "Review Google job description", completed: true, dueDate: "", companyId: "c1", recurring: null, eventId: null, createdAt: Date.now() - 86400000 * 6 },
+    // Event-specific prep tasks
+    { id: "cl8", text: "Research Blink Health", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
+    { id: "cl9", text: "Review job description", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev2", createdAt: Date.now() - 86400000 },
+    { id: "cl10", text: "Look up CEO background", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
+    { id: "cl11", text: "Prepare 'why Clover Health' answer", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev3", createdAt: Date.now() - 86400000 },
+    { id: "cl12", text: "Practice case questions", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
+    { id: "cl13", text: "Prep STAR story about product launch", completed: false, dueDate: "", companyId: null, recurring: null, eventId: "ev7", createdAt: Date.now() - 86400000 },
   ],
 
   stories: [

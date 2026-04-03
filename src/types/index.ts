@@ -43,6 +43,7 @@ export interface ChecklistItem {
   completed: boolean;
   dueDate: string;
   companyId: string | null;
+  eventId: string | null; // null = general, string = tied to a specific event
   recurring: RecurringFrequency;
   createdAt: number;
 }

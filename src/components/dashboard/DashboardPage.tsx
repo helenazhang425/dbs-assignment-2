@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [companySearch, setCompanySearch] = useState("");
+  const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Event form state
@@ -36,7 +37,7 @@ export default function DashboardPage() {
   const today = new Date(new Date().toDateString());
 
   // ---- Computed stats ----
-  const generalChecklist = state.checklist.filter((i) => !i.companyId);
+  const generalChecklist = state.checklist.filter((i) => !i.companyId && !i.eventId);
   const generalDone = generalChecklist.filter((i) => i.completed).length;
   const generalTotal = generalChecklist.length;
 
@@ -198,7 +199,7 @@ export default function DashboardPage() {
   // Application stats — simplified into 3 buckets
   const totalApplications = state.applications.length;
   const rejectedVerdicts = ["rejected without interview", "rejected - 1st round", "rejected - complete process"];
-  const inProcessVerdicts = ["offer", "no opening", "withdrew", "in process"];
+  const inProcessVerdicts = ["in process"];
   const appNoUpdate = state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length;
   const appRejected = state.applications.filter((a) => rejectedVerdicts.includes(a.verdict.toLowerCase())).length;
   const appInProcess = state.applications.filter((a) => inProcessVerdicts.includes(a.verdict.toLowerCase())).length;
@@ -245,7 +246,7 @@ export default function DashboardPage() {
                       <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
                         <div className={`h-full rounded-full ${row.color}`} style={{ width: `${Math.max(pct, 3)}%` }} />
                       </div>
-                      <span className="w-14 text-right text-xs text-gray-500">{pct}%</span>
+                      <span className="w-20 text-right text-xs text-gray-500">{row.count} ({pct}%)</span>
                     </div>
                   );
                 })}
@@ -317,7 +318,7 @@ export default function DashboardPage() {
         {/* Left: General Checklist */}
         <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">General Prep</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Checklist</h2>
             <Link href="/checklist" className="text-xs text-indigo-500 hover:text-indigo-700">View all</Link>
           </div>
 
@@ -347,22 +348,38 @@ export default function DashboardPage() {
             }
 
             const renderItem = (item: typeof generalChecklist[0]) => (
-              <div key={item.id} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
+              <div key={item.id} className="group/prep flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
                 <input type="checkbox" checked={item.completed}
                   onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: item.id } })}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <span
-                  onClick={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: item.id } })}
-                  className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${item.completed ? "text-gray-400 line-through opacity-60" : "text-gray-700"}`}
-                >
-                  {item.text}
-                </span>
+                {editingChecklistId === item.id ? (
+                  <input defaultValue={item.text} autoFocus
+                    onBlur={(e) => {
+                      dispatch({ type: "UPDATE_CHECKLIST_ITEM", payload: { id: item.id, updates: { text: e.target.value } } });
+                      setEditingChecklistId(null);
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingChecklistId(null); }}
+                    className="flex-1 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                ) : (
+                  <span
+                    onClick={() => setEditingChecklistId(item.id)}
+                    className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${item.completed ? "text-gray-400 line-through opacity-60" : "text-gray-700"}`}
+                  >
+                    {item.text}
+                  </span>
+                )}
                 {item.dueDate && (
                   <span className={`text-xs ${new Date(item.dueDate) < today && !item.completed ? "text-red-500 font-medium" : "text-gray-400"}`}>
                     {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
                 )}
+                <button onClick={() => dispatch({ type: "DELETE_CHECKLIST_ITEM", payload: { id: item.id } })}
+                  className="invisible group-hover/prep:visible text-gray-300 hover:text-red-500">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             );
 
@@ -427,8 +444,6 @@ export default function DashboardPage() {
             };
 
             const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
-              const eventTasks = ev.companyId ? state.checklist.filter((i) => i.companyId === ev.companyId) : [];
-              const tasksDone = eventTasks.filter((i) => i.completed).length;
               const badge = typeBadge(ev);
               const isEditing = editingEventId === ev.id;
 
@@ -496,7 +511,7 @@ export default function DashboardPage() {
                         {categoryOptions.map((opt) => (
                           <button key={opt.value}
                             onClick={() => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { category: opt.value as EventCategory, interviewType: opt.value === "networking" ? null : ev.interviewType } } })}
-                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.category === opt.value ? opt.active : opt.bg + " hover:opacity-80"}`}>
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.category === opt.value ? opt.active : opt.bg + " opacity-60 hover:opacity-80"}`}>
                             {opt.label}
                           </button>
                         ))}
@@ -511,7 +526,7 @@ export default function DashboardPage() {
                           {currentTypeOptions.map((opt) => (
                             <button key={opt.value}
                               onClick={() => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { interviewType: ev.interviewType === opt.value ? null : opt.value as InterviewType } } })}
-                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.interviewType === opt.value ? opt.active : opt.bg + " hover:opacity-80"}`}>
+                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${ev.interviewType === opt.value ? opt.active : opt.bg + " opacity-60 hover:opacity-80"}`}>
                               {opt.label}
                             </button>
                           ))}
@@ -644,24 +659,60 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  {eventTasks.length > 0 && (
-                    <div className="mt-2 border-t border-gray-50 pt-2" onClick={(e) => e.stopPropagation()}>
-                      <p className="mb-1.5 text-xs text-gray-400">{tasksDone}/{eventTasks.length} prep tasks</p>
-                      <div className="space-y-1">
-                        {eventTasks.map((task) => (
-                          <div key={task.id} className="flex items-center gap-2">
-                            <input type="checkbox" checked={task.completed}
-                              onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                            <span onClick={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                              className={`text-sm cursor-pointer select-none ${task.completed ? "text-gray-400 line-through" : "text-gray-600"}`}>
-                              {task.text}
-                            </span>
-                          </div>
-                        ))}
+                  {/* Per-event tasks (from checklist) */}
+                  {(() => {
+                    const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
+                    return (
+                      <div className="mt-2 border-t border-gray-50 pt-2" onClick={(e) => e.stopPropagation()}>
+                        {evTasks.length > 0 && (
+                          <>
+                            <p className="mb-1.5 text-xs text-gray-400">
+                              {evTasks.filter((t) => t.completed).length}/{evTasks.length} prep tasks
+                            </p>
+                            <div className="space-y-1">
+                              {evTasks.map((task) => (
+                                <div key={task.id} className="group/task flex items-center gap-2">
+                                  <input type="checkbox" checked={task.completed}
+                                    onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
+                                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                  {editingChecklistId === task.id ? (
+                                    <input defaultValue={task.text} autoFocus
+                                      onBlur={(e) => {
+                                        dispatch({ type: "UPDATE_CHECKLIST_ITEM", payload: { id: task.id, updates: { text: e.target.value } } });
+                                        setEditingChecklistId(null);
+                                      }}
+                                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingChecklistId(null); }}
+                                      className="flex-1 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
+                                  ) : (
+                                    <span onClick={() => setEditingChecklistId(task.id)}
+                                      className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${task.completed ? "text-gray-400 line-through opacity-60" : "text-gray-600"}`}>
+                                      {task.text}
+                                    </span>
+                                  )}
+                                  <button onClick={() => dispatch({ type: "DELETE_CHECKLIST_ITEM", payload: { id: task.id } })}
+                                    className="invisible group-hover/task:visible text-gray-300 hover:text-red-500">
+                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        <form className="mt-1.5 flex gap-1.5" onSubmit={(e) => {
+                          e.preventDefault();
+                          const input = (e.target as HTMLFormElement).elements.namedItem("newTask") as HTMLInputElement;
+                          if (!input.value.trim()) return;
+                          dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: ev.id } });
+                          input.value = "";
+                        }}>
+                          <input name="newTask" placeholder="+ Add prep task"
+                            className="flex-1 rounded border border-transparent px-2 py-1 text-xs text-gray-500 placeholder-gray-400 focus:border-gray-200 focus:text-gray-600 focus:outline-none" />
+                        </form>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             };
@@ -907,10 +958,11 @@ export default function DashboardPage() {
                 { value: "interview", label: "Interview", active: "bg-indigo-600 text-white", inactive: "bg-indigo-100 text-indigo-700" },
                 { value: "practice", label: "Practice", active: "bg-green-600 text-white", inactive: "bg-green-100 text-green-700" },
                 { value: "networking", label: "Networking", active: "bg-amber-500 text-white", inactive: "bg-amber-100 text-amber-700" },
+                { value: "other", label: "Other", active: "bg-gray-500 text-white", inactive: "bg-gray-100 text-gray-600" },
               ] as const).map((opt) => (
                 <button key={opt.value} type="button"
                   onClick={() => setEventCategory(opt.value)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${eventCategory === opt.value ? opt.active : opt.inactive + " hover:opacity-80"}`}>
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${eventCategory === opt.value ? opt.active : opt.inactive + " opacity-60 hover:opacity-80"}`}>
                   {opt.label}
                 </button>
               ))}
@@ -944,7 +996,7 @@ export default function DashboardPage() {
               ] as { value: string; label: string; active: string; inactive: string }[]).map((opt) => (
                 <button key={opt.value} type="button"
                   onClick={() => setEventInterviewType(eventInterviewType === opt.value ? null : opt.value as InterviewType)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${eventInterviewType === opt.value ? opt.active : opt.inactive + " hover:opacity-80"}`}>
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${eventInterviewType === opt.value ? opt.active : opt.inactive + " opacity-60 hover:opacity-80"}`}>
                   {opt.label}
                 </button>
               ))}
