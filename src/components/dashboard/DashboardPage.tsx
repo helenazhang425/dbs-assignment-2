@@ -255,10 +255,7 @@ export default function DashboardPage() {
     <div>
       {/* Greeting */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <span className="text-xs text-gray-400">{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
           {eventsThisWeek.length > 0
             ? `You have ${eventsThisWeek.length} event${eventsThisWeek.length > 1 ? "s" : ""} this week${
@@ -444,9 +441,9 @@ export default function DashboardPage() {
                           <Draggable key={item.id} draggableId={item.id} index={index}>
                             {(provided, snapshot) => (
                               <div ref={provided.innerRef} {...provided.draggableProps}
-                                className={snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}>
+                                className={`group/dragrow ${snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}`}>
                                 <div className="flex items-center">
-                                  <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400">
+                                  <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400 opacity-0 group-hover/dragrow:opacity-100 transition-opacity">
                                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                                       <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
                                       <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
@@ -465,28 +462,33 @@ export default function DashboardPage() {
                   </Droppable>
                 </DragDropContext>
                 {/* Inline add at bottom of General Prep */}
-                <form className="group/addform flex items-center gap-3 rounded-lg px-3 py-2" onSubmit={handleAddGeneral}>
-                  <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
-                  <input
-                    type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}
-                    placeholder="Add a task"
-                    className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700"
-                  />
-                  <label className={`cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative ${newItem ? "opacity-100" : "opacity-0 group-hover/addform:opacity-100"}`}>
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                <div className="group/addarea px-3 py-1 cursor-text" onClick={(e) => {
+                  const input = (e.currentTarget as HTMLElement).querySelector("input[type=text]") as HTMLInputElement;
+                  input?.focus();
+                }}>
+                  <form className="flex items-center gap-3 opacity-0 group-hover/addarea:opacity-100 group-focus-within/addarea:opacity-100 transition-opacity" onSubmit={handleAddGeneral}>
+                    <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
                     <input
-                      type="date" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}
+                      placeholder="Add a task"
+                      className="flex-1 text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600"
                     />
-                  </label>
-                  {newItemDate && (
-                    <span className="text-xs text-indigo-500">
-                      {new Date(newItemDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
-                  )}
-                </form>
+                    <label className={`cursor-pointer text-gray-300 hover:text-gray-500 transition-colors relative ${newItem ? "opacity-100" : "opacity-0"}`}>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <input
+                        type="date" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </label>
+                    {newItemDate && (
+                      <span className="text-xs text-indigo-500">
+                        {new Date(newItemDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                  </form>
+                </div>
                 {/* Company Prep — intentional sections */}
                 <div className="px-3 pt-3">
                   <div className="border-t border-gray-200 mt-2" />
@@ -586,9 +588,9 @@ export default function DashboardPage() {
                                   <Draggable key={item.id} draggableId={item.id} index={index}>
                                     {(provided, snapshot) => (
                                       <div ref={provided.innerRef} {...provided.draggableProps}
-                                        className={snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}>
+                                        className={`group/dragrow ${snapshot.isDragging ? "opacity-80 shadow-lg rounded-lg bg-white" : ""}`}>
                                         <div className="flex items-center">
-                                          <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400">
+                                          <div {...provided.dragHandleProps} className="px-1 py-2 cursor-grab text-gray-300 hover:text-gray-400 opacity-0 group-hover/dragrow:opacity-100 transition-opacity">
                                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                                               <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
                                               <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
@@ -606,17 +608,22 @@ export default function DashboardPage() {
                             )}
                           </Droppable>
                         </DragDropContext>
-                        <form className="flex items-center gap-3 rounded-lg px-3 py-1.5" onSubmit={(e) => {
-                          e.preventDefault();
-                          const input = (e.target as HTMLFormElement).elements.namedItem(`companyTask-${sectionId}`) as HTMLInputElement;
-                          if (!input.value.trim()) return;
-                          dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: sectionId } });
-                          input.value = "";
+                        <div className="group/addarea px-3 py-1 cursor-text" onClick={(e) => {
+                          const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement;
+                          input?.focus();
                         }}>
-                          <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
-                          <input name={`companyTask-${sectionId}`} placeholder="Add a task"
-                            className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-700" />
-                        </form>
+                          <form className="flex items-center gap-3 opacity-0 group-hover/addarea:opacity-100 group-focus-within/addarea:opacity-100 transition-opacity" onSubmit={(e) => {
+                            e.preventDefault();
+                            const input = (e.target as HTMLFormElement).elements.namedItem(`companyTask-${sectionId}`) as HTMLInputElement;
+                            if (!input.value.trim()) return;
+                            dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: sectionId } });
+                            input.value = "";
+                          }}>
+                            <span className="h-4 w-4 text-gray-300 flex items-center justify-center text-sm">+</span>
+                            <input name={`companyTask-${sectionId}`} placeholder="Add a task"
+                              className="flex-1 text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />
+                          </form>
+                        </div>
                       </div>
                     );
                   })}
@@ -908,16 +915,22 @@ export default function DashboardPage() {
                             </div>
                           </>
                         )}
-                        <form className="mt-1.5 flex gap-1.5" onSubmit={(e) => {
-                          e.preventDefault();
-                          const input = (e.target as HTMLFormElement).elements.namedItem("newTask") as HTMLInputElement;
-                          if (!input.value.trim()) return;
-                          dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: ev.id } });
-                          input.value = "";
+                        <div className="group/addarea mt-1 cursor-text" onClick={(e) => {
+                          const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement;
+                          input?.focus();
                         }}>
-                          <input name="newTask" placeholder="Add a task"
-                            className="flex-1 rounded border border-transparent px-2 py-1 text-xs text-gray-500 placeholder-gray-400 focus:border-gray-200 focus:text-gray-600 focus:outline-none" />
-                        </form>
+                          <form className="flex gap-1.5 opacity-0 group-hover/addarea:opacity-100 group-focus-within/addarea:opacity-100 transition-opacity" onSubmit={(e) => {
+                            e.preventDefault();
+                            const input = (e.target as HTMLFormElement).elements.namedItem("newTask") as HTMLInputElement;
+                            if (!input.value.trim()) return;
+                            dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: ev.id } });
+                            input.value = "";
+                          }}>
+                            <span className="text-gray-300 text-xs flex items-center">+</span>
+                            <input name="newTask" placeholder="Add a task"
+                              className="flex-1 rounded border border-transparent px-1 py-0.5 text-xs text-gray-400 placeholder-gray-300 focus:text-gray-600 focus:outline-none" />
+                          </form>
+                        </div>
                       </div>
                     );
                   })()}
@@ -1165,6 +1178,29 @@ export default function DashboardPage() {
           </>);
           })()}
         </div>
+      </div>
+
+      {/* Timezone */}
+      <div className="mt-6 flex justify-end">
+        <button
+          onClick={() => {
+            const tz = prompt("Enter timezone (e.g., America/Chicago, America/New_York, America/Los_Angeles):", Intl.DateTimeFormat().resolvedOptions().timeZone);
+            if (tz) {
+              try {
+                Intl.DateTimeFormat(undefined, { timeZone: tz });
+                alert(`Timezone display updated. Note: in-memory app cannot persist this change across refreshes.`);
+              } catch {
+                alert("Invalid timezone. Please use a valid IANA timezone like America/Chicago");
+              }
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
+          {Intl.DateTimeFormat().resolvedOptions().timeZone}
+        </button>
       </div>
 
       {/* Add Event Modal */}
