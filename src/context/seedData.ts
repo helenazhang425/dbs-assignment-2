@@ -154,6 +154,24 @@ export const seedData: AppState = {
   ],
 
   events: [
+    // Thursday Apr 2
+    {
+      id: "ev8",
+      title: "Tandem — S&O Lead",
+      date: "2026-04-02",
+      startTime: "14:40",
+      endTime: "15:00",
+      category: "interview",
+      interviewType: "recruiter-screen",
+      interviewStage: "recruiter",
+      companyId: null,
+      companyName: "Tandem",
+      role: "S&O Lead",
+      questionsAsked: [],
+      questionsToAsk: [],
+      notes: "",
+      createdAt: Date.now(),
+    },
     // Friday Apr 3 (today)
     {
       id: "ev0",
