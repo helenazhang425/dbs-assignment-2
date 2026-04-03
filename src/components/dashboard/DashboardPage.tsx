@@ -99,15 +99,19 @@ export default function DashboardPage() {
   const allUpcomingEvents = state.events
     .filter((ev) => new Date(ev.date + "T12:00:00") >= today)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  // Future events only — accounts for time (for list view and stat card)
+  // Events for list view: today and future (today's past events show faded)
   const upcomingEvents = state.events
+    .filter((ev) => new Date(ev.date + "T12:00:00") >= today)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Strictly future events (for stat card — excludes today's past events)
+  const futureEvents = state.events
     .filter((ev) => {
       const evEnd = ev.endTime || ev.startTime || "23:59";
       const evDateTime = new Date(`${ev.date}T${evEnd}:00`);
       return evDateTime > now;
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const nextInterview = upcomingEvents.find((ev) => ev.category === "interview");
+  const nextInterview = futureEvents.find((ev) => ev.category === "interview");
 
   // Events this week
   const endOfWeek = new Date(today);
@@ -767,6 +771,8 @@ export default function DashboardPage() {
             const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
               const badge = typeBadge(ev);
               const isEditing = editingEventId === ev.id;
+              const evEnd = ev.endTime || ev.startTime || "23:59";
+              const isPastToday = ev.date === today.toISOString().slice(0, 10) && new Date(`${ev.date}T${evEnd}:00`) < now;
 
               if (isEditing) {
                 const rolesForCompany = ev.companyName
@@ -954,7 +960,7 @@ export default function DashboardPage() {
 
               return (
                 <div key={ev.id} onClick={() => setEditingEventId(ev.id)}
-                  className="cursor-pointer rounded-lg border border-gray-100 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors">
+                  className={`cursor-pointer rounded-lg border border-gray-100 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors ${isPastToday ? "opacity-40" : ""}`}>
                   <div className="flex items-start gap-2">
                     {showDot && (
                       <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${dotColor(ev.category)}`} />
