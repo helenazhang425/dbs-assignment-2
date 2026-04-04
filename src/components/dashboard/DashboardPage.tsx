@@ -767,6 +767,8 @@ export default function DashboardPage() {
           {(() => {
             const practiceEvents = upcomingEvents.filter((ev) => ev.category === "practice");
             const interviewEvents = upcomingEvents.filter((ev) => ev.category === "interview");
+            const networkingEvents = upcomingEvents.filter((ev) => ev.category === "networking");
+            const otherEvents = upcomingEvents.filter((ev) => ev.category === "other");
 
             const renderEvent = (ev: typeof upcomingEvents[0], showDot = false) => {
               const badge = typeBadge(ev);
@@ -1099,6 +1101,26 @@ export default function DashboardPage() {
                         ) : interviewEvents.map((ev) => renderEvent(ev))}
                       </div>
                     </div>
+                    {networkingEvents.length > 0 && (
+                      <div>
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+                          <span className="h-2 w-2 rounded-full bg-amber-500" /> Networking
+                        </p>
+                        <div className="space-y-2">
+                          {networkingEvents.map((ev) => renderEvent(ev))}
+                        </div>
+                      </div>
+                    )}
+                    {otherEvents.length > 0 && (
+                      <div>
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+                          <span className="h-2 w-2 rounded-full bg-gray-400" /> Other
+                        </p>
+                        <div className="space-y-2">
+                          {otherEvents.map((ev) => renderEvent(ev))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1166,7 +1188,7 @@ export default function DashboardPage() {
                           <div
                             key={ev.id}
                             onClick={(e) => { e.stopPropagation(); setSelectedDate(dateStr); setEditingEventId(null); }}
-                            className={`cursor-pointer rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 ${
+                            className={`cursor-pointer rounded px-1.5 py-0.5 text-xs truncate ${
                               ev.category === "interview"
                                 ? "bg-indigo-100 text-indigo-700"
                                 : ev.category === "networking"
