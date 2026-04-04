@@ -59,7 +59,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
   // Get all events for this company (past and future)
   const companyEvents = state.events
-    .filter((ev) => ev.companyName?.toLowerCase() === company.name.toLowerCase())
+    .filter((ev) => ev.companyName?.toLowerCase() === company.name.toLowerCase() &&
+      (!company.role || !ev.role || ev.role.toLowerCase() === company.role.toLowerCase()))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const today = new Date(new Date().toDateString());
