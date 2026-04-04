@@ -266,7 +266,7 @@ export default function DashboardPage() {
 
   // Application stats — simplified into 3 buckets
   const totalApplications = state.applications.length;
-  const rejectedVerdicts = ["rejected without interview", "rejected - interviewed"];
+  const rejectedVerdicts = ["rejected - no interview", "rejected - interviewed"];
   const inProcessVerdicts = ["in process"];
   const appNoUpdate = state.applications.filter((a) => a.verdict.toLowerCase() === "no update").length;
   const appRejected = state.applications.filter((a) => rejectedVerdicts.includes(a.verdict.toLowerCase())).length;

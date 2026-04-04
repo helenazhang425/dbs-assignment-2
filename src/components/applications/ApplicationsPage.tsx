@@ -12,7 +12,7 @@ type SortDir = "asc" | "desc" | "none";
 const VERDICT_COLORS: Record<string, string> = {
   "no update": "bg-blue-50 text-blue-700",
   "in process": "bg-amber-100 text-amber-700",
-  "rejected without interview": "bg-red-50 text-red-600",
+  "rejected - no interview": "bg-red-50 text-red-600",
   "rejected - interviewed": "bg-red-100 text-red-700",
   "no opening": "bg-gray-100 text-gray-600",
   withdrew: "bg-purple-100 text-purple-700",
@@ -26,7 +26,7 @@ function getVerdictClass(verdict: string) {
 const VERDICTS = [
   "No Update",
   "In Process",
-  "Rejected without Interview",
+  "Rejected - No Interview",
   "Rejected - interviewed",
   "No Opening",
   "Withdrew",
@@ -38,7 +38,7 @@ export default function ApplicationsPage() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => searchParams.get("tab") === "saved" ? "saved" : "applied");
   const [search, setSearch] = useState("");
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterSearch, setFilterSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("appliedDate");
@@ -98,10 +98,13 @@ export default function ApplicationsPage() {
     if (dateFilter.month) {
       result = result.filter((a) => a.appliedDate?.slice(0, 7) === `${dateFilter.year}-${dateFilter.month}`);
     }
-    // Apply column filters (supports partial match / contains)
-    Object.entries(columnFilters).forEach(([key, value]) => {
-      if (value) {
-        result = result.filter((a) => (a as unknown as Record<string, string>)[key]?.toLowerCase().includes(value.toLowerCase()));
+    // Apply column filters (multi-select, partial match)
+    Object.entries(columnFilters).forEach(([key, values]) => {
+      if (values && values.length > 0) {
+        result = result.filter((a) => {
+          const cellValue = (a as unknown as Record<string, string>)[key]?.toLowerCase() ?? "";
+          return values.some((v) => cellValue.includes(v.toLowerCase()));
+        });
       }
     });
     if (sortDir !== "none") {
@@ -295,18 +298,22 @@ export default function ApplicationsPage() {
             />
           </div>
           {/* Active filters display */}
-          {Object.entries(columnFilters).filter(([, v]) => v).length > 0 && (
+          {Object.entries(columnFilters).filter(([, v]) => v && v.length > 0).length > 0 && (
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-400">Filters:</span>
-              {Object.entries(columnFilters).filter(([, v]) => v).map(([key, value]) => (
-                <button key={key} onClick={() => setColumnFilters((prev) => ({ ...prev, [key]: "" }))}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
-                  {value}
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              ))}
+              {Object.entries(columnFilters).flatMap(([key, values]) =>
+                (values ?? []).map((value) => (
+                  <button key={`${key}-${value}`} onClick={() => setColumnFilters((prev) => ({
+                    ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
+                  }))}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
+                    {value}
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                ))
+              )}
               <button onClick={() => setColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
             </div>
           )}
@@ -337,7 +344,7 @@ export default function ApplicationsPage() {
           <p className="mb-2 text-xs text-gray-400">{displayedApps.length} of {filtered.length} shown</p>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white" style={{ minHeight: "400px" }}>
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -354,7 +361,7 @@ export default function ApplicationsPage() {
                           {col.label}{sortIcon(col.key)}
                         </span>
                         <button onClick={(e) => { e.stopPropagation(); setActiveFilter(activeFilter === col.key ? null : col.key); }}
-                          className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${columnFilters[col.key] ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
+                          className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${columnFilters[col.key]?.length ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
                           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                           </svg>
@@ -373,8 +380,11 @@ export default function ApplicationsPage() {
                               placeholder="Type and press Enter..."
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" && filterSearch.trim()) {
-                                  setColumnFilters((prev) => ({ ...prev, [col.key]: filterSearch.trim() }));
-                                  setActiveFilter(null); setFilterSearch("");
+                                  setColumnFilters((prev) => ({
+                                    ...prev,
+                                    [col.key]: [...(prev[col.key] ?? []), filterSearch.trim()],
+                                  }));
+                                  setFilterSearch("");
                                 }
                               }}
                               className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
@@ -382,12 +392,17 @@ export default function ApplicationsPage() {
                           <div className="max-h-48 overflow-y-auto px-1 pb-1">
                             {filteredValues.map((val) => (
                               <button key={val} onClick={() => {
-                                const newVal = columnFilters[col.key] === val ? "" : val;
-                                setColumnFilters((prev) => ({ ...prev, [col.key]: newVal }));
-                                setActiveFilter(null); setFilterSearch("");
+                                setColumnFilters((prev) => {
+                                  const current = prev[col.key] ?? [];
+                                  const isActive = current.some((v) => v.toLowerCase() === val.toLowerCase());
+                                  return {
+                                    ...prev,
+                                    [col.key]: isActive ? current.filter((v) => v.toLowerCase() !== val.toLowerCase()) : [...current, val],
+                                  };
+                                });
                               }}
                                 className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
-                                  col.key === "verdict" ? getVerdictClass(val) : columnFilters[col.key] === val ? "text-indigo-600 font-medium" : "text-gray-600"
+                                  col.key === "verdict" ? getVerdictClass(val) : columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : "text-gray-600"
                                 }`}>
                                 {col.key === "verdict" ? (
                                   <span className={`inline-flex rounded-full px-2 py-0.5 ${getVerdictClass(val)}`}>{val}</span>
