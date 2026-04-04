@@ -279,8 +279,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
                       {/* Questions to Ask */}
                       <div className="mb-4">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-400">Questions to Ask</p>
-                        <div className="border-l-2 border-indigo-200 pl-3 space-y-0.5">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Questions to Ask</p>
+                        <div className="pl-4 space-y-0.5">
                         {ev.questionsToAsk.map((q, qi) => (
                           <div key={qi} className="group flex items-center gap-2 py-0.5">
                             {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
@@ -311,8 +311,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
                       {/* Questions Asked */}
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-500">Questions They Asked</p>
-                        <div className="border-l-2 border-amber-200 pl-3 space-y-0.5">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Questions They Asked</p>
+                        <div className="pl-4 space-y-0.5">
                         {ev.questionsAsked.map((q, qi) => (
                           <div key={qi} className="group flex items-center gap-2 py-0.5">
                             {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
