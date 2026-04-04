@@ -77,7 +77,7 @@ export default function QuestionsPage() {
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     return pool;
-  }, [filtered, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filtered, mode, selectedForPractice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentPracticeQ = practicePool[practiceIndex % practicePool.length];
 
@@ -158,7 +158,7 @@ export default function QuestionsPage() {
       setHistory((h) => [...h, { index: practiceIndex, action: "learning" as const }]);
     }
     setSwipeDir("left");
-    setTimeout(() => advanceCard(), 300);
+    setTimeout(() => advanceCard(), 400);
   }
 
   function markKnow() {
@@ -169,7 +169,7 @@ export default function QuestionsPage() {
       setHistory((h) => [...h, { index: practiceIndex, action: "know" as const }]);
     }
     setSwipeDir("right");
-    setTimeout(() => advanceCard(), 300);
+    setTimeout(() => advanceCard(), 400);
   }
 
   function goBack() {
@@ -206,84 +206,6 @@ export default function QuestionsPage() {
     setStopwatchTime(0);
     setAudioUrl(null);
     if (recording) stopRecording();
-  }
-
-  // Selection Screen
-  if (mode === "select") {
-    const categories = ["behavioral", "product-case", "role-specific"] as QuestionCategory[];
-    return (
-      <div>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Select Questions</h1>
-            <p className="mt-1 text-sm text-gray-500">{selectedForPractice.size} of {filtered.length} selected</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setMode("view")}>Cancel</Button>
-            <Button onClick={() => { startPractice(); }} disabled={selectedForPractice.size === 0}>
-              Start ({selectedForPractice.size})
-            </Button>
-          </div>
-        </div>
-
-        <div className="mb-4 flex items-center gap-3 text-xs">
-          <button onClick={() => setSelectedForPractice(new Set(filtered.map((q) => q.id)))}
-            className="text-indigo-500 hover:text-indigo-700">Select all</button>
-          <button onClick={() => setSelectedForPractice(new Set())}
-            className="text-gray-400 hover:text-gray-600">Clear all</button>
-        </div>
-
-        {categories.map((cat) => {
-          const catQuestions = filtered.filter((q) => q.category === cat);
-          if (catQuestions.length === 0) return null;
-          const allSelected = catQuestions.every((q) => selectedForPractice.has(q.id));
-          return (
-            <div key={cat} className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <button onClick={() => {
-                  const ids = catQuestions.map((q) => q.id);
-                  setSelectedForPractice((prev) => {
-                    const next = new Set(prev);
-                    if (allSelected) ids.forEach((id) => next.delete(id));
-                    else ids.forEach((id) => next.add(id));
-                    return next;
-                  });
-                }}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    cat === "behavioral" ? "bg-blue-50 text-blue-700" :
-                    cat === "product-case" ? "bg-purple-50 text-purple-700" : "bg-amber-50 text-amber-700"
-                  }`}>
-                  {categoryLabels[cat]} ({catQuestions.length})
-                </button>
-                <span className="text-xs text-gray-400">{allSelected ? "all selected" : ""}</span>
-              </div>
-              <div className="space-y-1">
-                {catQuestions.map((q) => {
-                  const isSelected = selectedForPractice.has(q.id);
-                  return (
-                    <label key={q.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50 ${isSelected ? "bg-indigo-50/50" : ""}`}>
-                      <input type="checkbox" checked={isSelected}
-                        onChange={() => setSelectedForPractice((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(q.id)) next.delete(q.id); else next.add(q.id);
-                          return next;
-                        })}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                      <span className={`text-sm ${isSelected ? "text-gray-900" : "text-gray-600"}`}>{q.text}</span>
-                      {q.confidence && (
-                        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${confidenceConfig[q.confidence].cls}`}>
-                          {confidenceConfig[q.confidence].label}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
   }
 
   // Practice Mode UI
@@ -325,16 +247,13 @@ export default function QuestionsPage() {
               <Button variant="secondary" onClick={() => { setMode("view"); setStillLearning(0); setKnow(0); setHistory([]); }}>Back to Questions</Button>
               {stillLearning > 0 && (
                 <Button variant="secondary" onClick={() => {
-                  // Re-practice only the "still practicing" questions
-                  const stillPracticingIds = history.filter((h) => h.action === "learning").map((h) => practicePool[h.index]?.id).filter(Boolean);
-                  const newPool = practicePool.filter((q) => stillPracticingIds.includes(q.id));
-                  if (newPool.length > 0) {
-                    setPracticeIndex(0);
-                    setStillLearning(0);
-                    setKnow(0);
-                    setHistory([]);
-                    setCardKey((k) => k + 1);
-                  }
+                  const stillPracticingIds = new Set(history.filter((h) => h.action === "learning").map((h) => practicePool[h.index]?.id).filter(Boolean));
+                  setSelectedForPractice(stillPracticingIds);
+                  setPracticeIndex(0);
+                  setStillLearning(0);
+                  setKnow(0);
+                  setHistory([]);
+                  setCardKey((k) => k + 1);
                 }}>Practice Still Practicing ({stillLearning})</Button>
               )}
               <Button onClick={() => { startPractice(); setStillLearning(0); setKnow(0); setHistory([]); }}>Practice All Again</Button>
@@ -344,7 +263,7 @@ export default function QuestionsPage() {
           <div key={cardKey}>
             {/* Flashcard */}
             <div className="rounded-2xl border border-gray-200 bg-gray-50 shadow-sm overflow-hidden"
-              style={{ animation: swipeDir === "left" ? "swipeLeft 0.3s ease forwards" : swipeDir === "right" ? "swipeRight 0.3s ease forwards" : "cardEnter 0.3s ease" }}>
+              style={{ animation: swipeDir === "left" ? "swipeLeft 0.4s ease forwards" : swipeDir === "right" ? "swipeRight 0.4s ease forwards" : "cardEnter 0.25s ease" }}>
 
               {/* Question centered */}
               <div className="flex items-center justify-center min-h-[300px] px-12 py-16">
@@ -424,7 +343,11 @@ export default function QuestionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => { setMode("select"); setSelectedForPractice(new Set(filtered.map((q) => q.id))); }}>Practice</Button>
+          {mode === "select" ? (
+            <Button variant="secondary" onClick={() => { setMode("view"); setSelectedForPractice(new Set()); }}>Cancel</Button>
+          ) : (
+            <Button variant="secondary" onClick={() => { setMode("select"); setSelectedForPractice(new Set()); }}>Practice</Button>
+          )}
           <Button onClick={() => setShowAdd(true)}>Add Question</Button>
         </div>
       </div>
@@ -468,8 +391,18 @@ export default function QuestionsPage() {
           const isExpanded = expandedId === q.id;
           return (
             <div key={q.id} ref={isExpanded ? (el) => { if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50); } : undefined}
-              className={`group rounded-xl border bg-white overflow-hidden ${isExpanded ? "border-indigo-200" : "border-gray-200 hover:shadow-sm"}`}>
-              <div className="flex items-start justify-between gap-2 p-4 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : q.id)}>
+              className={`group rounded-xl border overflow-hidden ${
+                mode === "select" && selectedForPractice.has(q.id) ? "border-amber-300 bg-amber-50" :
+                mode === "select" ? "border-gray-200 bg-white hover:bg-amber-50/50" :
+                isExpanded ? "border-indigo-200 bg-white" : "border-gray-200 bg-white hover:shadow-sm"
+              }`}>
+              <div className="flex items-start justify-between gap-2 p-4 cursor-pointer" onClick={() => {
+                if (mode === "select") {
+                  setSelectedForPractice((prev) => { const next = new Set(prev); if (next.has(q.id)) next.delete(q.id); else next.add(q.id); return next; });
+                } else {
+                  setExpandedId(isExpanded ? null : q.id);
+                }
+              }}>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900 break-words">{q.text}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -576,6 +509,20 @@ export default function QuestionsPage() {
 
       {filtered.length === 0 && (
         <div className="py-12 text-center text-sm text-gray-400">No questions found.</div>
+      )}
+
+      {/* Floating start bar */}
+      {mode === "select" && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 rounded-2xl bg-white border border-gray-200 shadow-xl px-6 py-3" style={{ animation: "slideUp 0.2s ease" }}>
+          <span className="text-sm text-gray-600">{selectedForPractice.size} selected</span>
+          <button onClick={() => setSelectedForPractice(new Set(filtered.map((q) => q.id)))}
+            className="text-xs text-indigo-500 hover:text-indigo-700">All</button>
+          <button onClick={() => setSelectedForPractice(new Set())}
+            className="text-xs text-gray-400 hover:text-gray-600">None</button>
+          <Button onClick={() => startPractice()} disabled={selectedForPractice.size === 0}>
+            Start Practicing
+          </Button>
+        </div>
       )}
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Question">

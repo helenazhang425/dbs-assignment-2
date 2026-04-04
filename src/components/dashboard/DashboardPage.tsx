@@ -94,8 +94,9 @@ export default function DashboardPage() {
 
   const questionsPracticed = state.questions.filter((q) => q.practiceCount > 0).length;
   const questionsTotal = state.questions.length;
-  const storiesCount = state.stories.length;
-  const unresolvedFeedback = state.stories.reduce(
+  const activeStories = state.stories.filter((s) => !s.archived);
+  const storiesCount = activeStories.length;
+  const unresolvedFeedback = activeStories.reduce(
     (sum, s) => sum + s.feedback.filter((f) => !f.resolved).length, 0
   );
 

@@ -57,25 +57,25 @@
 @keyframes swipeLeft {
   to {
     opacity: 0;
-    transform: translateX(-120%) rotate(-8deg);
+    transform: translateX(-80%) rotate(-3deg);
   }
 }
 
 @keyframes swipeRight {
   to {
     opacity: 0;
-    transform: translateX(120%) rotate(8deg);
+    transform: translateX(80%) rotate(3deg);
   }
 }
 
 @keyframes cardEnter {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
