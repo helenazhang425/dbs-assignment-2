@@ -269,7 +269,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       const s = matches[roleHighlight];
                       const oldTitle = (e.target as HTMLInputElement).dataset.originalTitle ?? role.title;
                       (e.target as HTMLInputElement).value = s.role;
-                      updateRole(role.id, { title: s.role });
+                      updateRole(role.id, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
                       syncRoleName(oldTitle, s.role);
                       setAddRoleSearch("");
                       setRoleHighlight(-1);
@@ -292,7 +292,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       if (input) {
                         const oldTitle = input.dataset.originalTitle ?? role.title;
                         input.value = s.role;
-                        updateRole(role.id, { title: s.role });
+                        updateRole(role.id, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
                         syncRoleName(oldTitle, s.role);
                         setAddRoleSearch("");
                         setRoleHighlight(-1);
@@ -312,8 +312,15 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
                 <input value={role.roleUrl} onChange={(e) => updateRole(role.id, { roleUrl: e.target.value })}
-                  placeholder="Role URL"
-                  className="text-xs text-indigo-500 placeholder-gray-300 bg-transparent border-none focus:outline-none flex-1" />
+                  placeholder="Role URL" size={role.roleUrl ? role.roleUrl.length || 10 : 10}
+                  className="text-xs text-indigo-500 placeholder-gray-300 bg-transparent border-none focus:outline-none" />
+                {role.roleUrl && (
+                  <a href={role.roleUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-indigo-500">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
               </div>
               <StatusDropdown status={role.status} onChange={(s) => changeRoleStatus(role.id, s)} />
             </div>
@@ -356,15 +363,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                             <input type="time" value={newEvEnd} onChange={(e) => setNewEvEnd(e.target.value)}
                               className="rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
                           </div>
-                          <select value={newEvType} onChange={(e) => setNewEvType(e.target.value)}
-                            className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none">
-                            <option value="">Type...</option>
-                            <option value="recruiter-screen">Recruiter Screen</option>
-                            <option value="behavioral">Behavioral</option>
-                            <option value="case">Case</option>
-                            <option value="presentation">Presentation</option>
-                            <option value="mixed">Mixed</option>
-                          </select>
+                          <InterviewTypeDropdown value={(newEvType || null) as InterviewType | null} onChange={(v) => setNewEvType(v ?? "")} />
                           <div className="flex gap-2">
                             <button disabled={!newEvDate} onClick={() => {
                               dispatch({ type: "ADD_EVENT", payload: {
@@ -554,15 +553,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       <input type="time" value={newEvEnd} onChange={(e) => setNewEvEnd(e.target.value)}
                         className="rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
                     </div>
-                    <select value={newEvType} onChange={(e) => setNewEvType(e.target.value)}
-                      className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none">
-                      <option value="">Type...</option>
-                      <option value="recruiter-screen">Recruiter Screen</option>
-                      <option value="behavioral">Behavioral</option>
-                      <option value="case">Case</option>
-                      <option value="presentation">Presentation</option>
-                      <option value="mixed">Mixed</option>
-                    </select>
+                    <InterviewTypeDropdown value={(newEvType || null) as InterviewType | null} onChange={(v) => setNewEvType(v ?? "")} />
                     <div className="flex gap-2">
                       <button disabled={!newEvDate} onClick={() => {
                         dispatch({ type: "ADD_EVENT", payload: {

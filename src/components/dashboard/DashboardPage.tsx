@@ -833,7 +833,8 @@ export default function DashboardPage() {
                 }
 
                 return (
-                  <div key={ev.id} ref={editFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3" style={{ animation: "scaleIn 0.15s ease" }}>
+                  <div key={ev.id} ref={editFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3" style={{ animation: "scaleIn 0.15s ease" }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { const tag = (e.target as HTMLElement).tagName; if (tag === "INPUT" || tag === "SELECT") { e.preventDefault(); (e.target as HTMLElement).blur(); setTimeout(() => { setEditingEventId(null); setCompanySearch(""); }, 0); } } }}>
                     {/* Title (auto-generated: role + company) */}
                     <input defaultValue={ev.title}
                       onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { title: e.target.value } } })}
