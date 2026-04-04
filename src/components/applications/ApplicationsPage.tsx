@@ -338,33 +338,28 @@ export default function ApplicationsPage() {
               className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
-          {/* Active filters display — always reserve space */}
-          <div className="min-h-[28px] mb-1">
-          {Object.entries(columnFilters).filter(([, v]) => v && v.length > 0).length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-400">Filters:</span>
-              {Object.entries(columnFilters).flatMap(([key, values]) =>
-                (values ?? []).map((value) => (
-                  <button key={`${key}-${value}`} onClick={() => setColumnFilters((prev) => ({
-                    ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
-                  }))}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
-                    {value}
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ))
-              )}
+          {/* Active filters + count — fixed layout */}
+          <div className="flex flex-wrap items-center gap-2 mb-1 h-7">
+            <span className="text-xs text-gray-400">{displayedApps.length} of {filtered.length} shown</span>
+            {Object.entries(columnFilters).flatMap(([key, values]) =>
+              (values ?? []).map((value) => (
+                <button key={`${key}-${value}`} onClick={() => setColumnFilters((prev) => ({
+                  ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
+                }))}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
+                  {value}
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))
+            )}
+            {Object.values(columnFilters).some((v) => v && v.length > 0) && (
               <button onClick={() => setColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
-            </div>
-          )}
+            )}
           </div>
-
-          {/* Bulk actions — always reserve space */}
-          <div className="min-h-[36px] mb-1">
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2 mb-1">
               <span className="text-sm text-indigo-700">{selectedIds.size} selected</span>
               <select value={bulkVerdict} onChange={(e) => setBulkVerdict(e.target.value)}
                 className="rounded border border-indigo-200 px-2 py-1 text-xs focus:outline-none">
@@ -384,13 +379,10 @@ export default function ApplicationsPage() {
               </button>
             </div>
           )}
-          </div>
-
-          <p className="mb-2 text-xs text-gray-400">{displayedApps.length} of {filtered.length} shown</p>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white" style={{ minHeight: "400px" }}>
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white" style={{ minHeight: "400px", scrollbarGutter: "stable" }}>
+            <table className="w-full text-sm table-fixed">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-3 py-3">
@@ -471,7 +463,7 @@ export default function ApplicationsPage() {
               <tbody className="divide-y divide-gray-100">
                 {/* Inline add row */}
                 <tr className="hover:bg-gray-50">
-                  <td className="px-3 py-2.5" />
+                  <td className="w-10 px-3 py-2.5" />
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1">
                       <span className="text-gray-300 text-sm">+</span>
@@ -486,9 +478,9 @@ export default function ApplicationsPage() {
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRow(e as unknown as React.FormEvent); } }}
                       className="w-full text-sm text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 overflow-hidden">
                     {newCompany && <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
-                      className="text-sm text-gray-400 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
+                      className="w-full max-w-full text-sm text-gray-400 bg-transparent border-none focus:outline-none focus:text-gray-600" />}
                   </td>
                   <td className="px-4 py-2.5">
                     {newCompany && <input value={newMethod} onChange={(e) => setNewMethod(e.target.value)} placeholder="Method"
@@ -616,27 +608,24 @@ export default function ApplicationsPage() {
               placeholder="Search company or role..."
               className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </div>
-          {Object.entries(savedColumnFilters).filter(([, v]) => v).length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-400">Filters:</span>
-              {Object.entries(savedColumnFilters).filter(([, v]) => v).map(([key, value]) => (
-                <button key={key} onClick={() => setSavedColumnFilters((prev) => ({ ...prev, [key]: "" }))}
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
-                  {value}
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              ))}
+          {/* Active filters + count — fixed layout */}
+          <div className="flex flex-wrap items-center gap-2 mb-1 h-7">
+            <span className="text-xs text-gray-400">{filteredSaved.length} positions</span>
+            {Object.entries(savedColumnFilters).filter(([, v]) => v).map(([key, value]) => (
+              <button key={key} onClick={() => setSavedColumnFilters((prev) => ({ ...prev, [key]: "" }))}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
+                {value}
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            ))}
+            {Object.values(savedColumnFilters).some((v) => v) && (
               <button onClick={() => setSavedColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
-            </div>
-          )}
-          <p className="mb-2 text-xs text-gray-400">{filteredSaved.length} positions</p>
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          {/* Bulk actions for To Apply */}
-          <div className="min-h-[36px] mb-1">
+            )}
+          </div>
           {selectedSavedIds.size > 0 && (
-            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2 mb-1">
               <span className="text-sm text-indigo-700">{selectedSavedIds.size} selected</span>
               <button onClick={() => {
                 selectedSavedIds.forEach((id) => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id } }));
@@ -649,7 +638,7 @@ export default function ApplicationsPage() {
               <button onClick={() => setSelectedSavedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
             </div>
           )}
-          </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
 
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
@@ -720,6 +709,7 @@ export default function ApplicationsPage() {
               <tbody className="divide-y divide-gray-100">
                 {/* Inline add row */}
                 <tr className="hover:bg-gray-50">
+                  <td className="w-10 px-3 py-2.5" />
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1">
                       <span className="text-gray-300 text-sm">+</span>
@@ -860,33 +850,28 @@ export default function ApplicationsPage() {
             placeholder="Search archived..."
             className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
         </div>
-        {/* Active filters */}
-        <div className="min-h-[28px] mb-1">
-        {Object.entries(archivedColumnFilters).filter(([, v]) => v && v.length > 0).length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-gray-400">Filters:</span>
-            {Object.entries(archivedColumnFilters).flatMap(([key, values]) =>
-              (values ?? []).map((value) => (
-                <button key={`${key}-${value}`} onClick={() => setArchivedColumnFilters((prev) => ({
-                  ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
-                }))}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
-                  {value}
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              ))
-            )}
+        {/* Active filters + count + bulk actions — fixed layout */}
+        <div className="flex flex-wrap items-center gap-2 mb-1 h-7">
+          <span className="text-xs text-gray-400">{filteredArchived.length} archived</span>
+          {Object.entries(archivedColumnFilters).flatMap(([key, values]) =>
+            (values ?? []).map((value) => (
+              <button key={`${key}-${value}`} onClick={() => setArchivedColumnFilters((prev) => ({
+                ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
+              }))}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
+                {value}
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            ))
+          )}
+          {Object.values(archivedColumnFilters).some((v) => v && v.length > 0) && (
             <button onClick={() => setArchivedColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
-          </div>
-        )}
+          )}
         </div>
-        <p className="mb-2 text-xs text-gray-400">{filteredArchived.length} archived</p>
-        {/* Bulk actions for Archived */}
-        <div className="min-h-[36px] mb-1">
         {selectedArchivedIds.size > 0 && (
-          <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+          <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2 mb-1">
             <span className="text-sm text-indigo-700">{selectedArchivedIds.size} selected</span>
             <button onClick={() => {
               selectedArchivedIds.forEach((id) => dispatch({ type: "UNARCHIVE_APPLICATION", payload: { id } }));
@@ -899,12 +884,11 @@ export default function ApplicationsPage() {
             <button onClick={() => setSelectedArchivedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
           </div>
         )}
-        </div>
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-10 px-3 py-3">
+                <th className="w-10 px-3 py-3 text-left">
                   <input type="checkbox"
                     checked={selectedArchivedIds.size === filteredArchived.length && filteredArchived.length > 0}
                     onChange={() => {
@@ -978,8 +962,8 @@ export default function ApplicationsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredArchived.map((app) => (
-                <tr key={app.id} className={`hover:bg-gray-50 opacity-60 ${selectedArchivedIds.has(app.id) ? "!opacity-100 bg-indigo-50/50" : ""}`}>
-                  <td className="px-3 py-2.5">
+                <tr key={app.id} className={`hover:bg-gray-50 ${selectedArchivedIds.has(app.id) ? "bg-indigo-50/50" : ""}`}>
+                  <td className="w-10 px-3 py-2.5">
                     <input type="checkbox" checked={selectedArchivedIds.has(app.id)}
                       onChange={() => setSelectedArchivedIds((prev) => {
                         const next = new Set(prev);
@@ -988,12 +972,12 @@ export default function ApplicationsPage() {
                       })}
                       className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-900">{app.company}</td>
-                  <td className="px-4 py-2.5 text-sm text-gray-600">{app.role}</td>
-                  <td className="px-4 py-2.5 text-sm text-gray-500">
+                  <td className="px-4 py-2.5 text-sm text-gray-400 opacity-50">{app.company}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-400 opacity-50">{app.role}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500 opacity-50">
                     {app.appliedDate?.length === 4 ? app.appliedDate : app.appliedDate ? new Date(app.appliedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—"}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 opacity-50">
                     <span className={`inline-flex rounded-2xl px-2.5 py-0.5 text-xs font-medium w-28 ${getVerdictClass(app.verdict)}`}>{app.verdict}</span>
                   </td>
                   <td className="px-4 py-2.5">
