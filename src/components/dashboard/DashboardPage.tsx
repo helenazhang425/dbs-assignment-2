@@ -988,67 +988,6 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  {/* Per-event tasks (from checklist) */}
-                  {(() => {
-                    const evTasks = state.checklist.filter((t) => t.eventId === ev.id)
-                      .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
-                    return (
-                      <div className="mt-2 border-t border-gray-50 pt-2" onClick={(e) => e.stopPropagation()}>
-                        {evTasks.length > 0 && (
-                          <>
-                            <p className="mb-1.5 text-xs text-gray-400">
-                              {evTasks.filter((t) => t.completed).length}/{evTasks.length} prep tasks
-                            </p>
-                            <div className="space-y-1">
-                              {evTasks.map((task) => (
-                                <div key={task.id} className="group/task flex items-center gap-2">
-                                  <input type="checkbox" checked={task.completed}
-                                    onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                                  {editingChecklistId === task.id ? (
-                                    <input defaultValue={task.text} autoFocus
-                                      onBlur={(e) => {
-                                        dispatch({ type: "UPDATE_CHECKLIST_ITEM", payload: { id: task.id, updates: { text: e.target.value } } });
-                                        setEditingChecklistId(null);
-                                      }}
-                                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingChecklistId(null); }}
-                                      className="flex-1 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
-                                  ) : (
-                                    <span onClick={(e) => { e.stopPropagation(); setEditingChecklistId(task.id); }}
-                                      className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${task.completed ? "text-gray-400 line-through opacity-60" : "text-gray-600"}`}>
-                                      {task.text}
-                                    </span>
-                                  )}
-                                  <button onClick={() => dispatch({ type: "DELETE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                                    className="invisible group-hover/task:visible text-gray-300 hover:text-red-500">
-                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                        <div className="group/addarea mt-1 cursor-text" onClick={(e) => {
-                          const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement;
-                          input?.focus();
-                        }}>
-                          <form className="flex gap-1.5 opacity-0 group-hover/addarea:opacity-100 group-focus-within/addarea:opacity-100 transition-opacity" onSubmit={(e) => {
-                            e.preventDefault();
-                            const input = (e.target as HTMLFormElement).elements.namedItem("newTask") as HTMLInputElement;
-                            if (!input.value.trim()) return;
-                            dispatch({ type: "ADD_CHECKLIST_ITEM", payload: { text: input.value.trim(), eventId: ev.id } });
-                            input.value = "";
-                          }}>
-                            <span className="text-gray-300 text-xs flex items-center">+</span>
-                            <input name="newTask" placeholder="Add a task"
-                              className="flex-1 rounded border border-transparent px-1 py-0.5 text-xs text-gray-400 placeholder-gray-300 focus:text-gray-600 focus:outline-none" />
-                          </form>
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
               );
             };
