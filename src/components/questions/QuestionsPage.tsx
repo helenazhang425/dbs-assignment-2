@@ -36,6 +36,9 @@ export default function QuestionsPage() {
 
   // Practice mode state
   const [practiceIndex, setPracticeIndex] = useState(0);
+  const [swipeDir, setSwipeDir] = useState<"left" | "right" | null>(null);
+  const [cardKey, setCardKey] = useState(0);
+  const [history, setHistory] = useState<{ index: number; action: "learning" | "know" }[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
   const [stopwatchTime, setStopwatchTime] = useState(0);
@@ -144,8 +147,10 @@ export default function QuestionsPage() {
       dispatch({ type: "INCREMENT_PRACTICE", payload: { id: currentPracticeQ.id } });
       dispatch({ type: "UPDATE_QUESTION", payload: { id: currentPracticeQ.id, updates: { confidence: "low" } } });
       setStillLearning((c) => c + 1);
+      setHistory((h) => [...h, { index: practiceIndex, action: "learning" as const }]);
     }
-    advanceCard();
+    setSwipeDir("left");
+    setTimeout(() => advanceCard(), 300);
   }
 
   function markKnow() {
@@ -153,12 +158,39 @@ export default function QuestionsPage() {
       dispatch({ type: "INCREMENT_PRACTICE", payload: { id: currentPracticeQ.id } });
       dispatch({ type: "UPDATE_QUESTION", payload: { id: currentPracticeQ.id, updates: { confidence: "high" } } });
       setKnow((c) => c + 1);
+      setHistory((h) => [...h, { index: practiceIndex, action: "know" as const }]);
     }
-    advanceCard();
+    setSwipeDir("right");
+    setTimeout(() => advanceCard(), 300);
   }
+
+  function goBack() {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    if (last.action === "learning") setStillLearning((c) => Math.max(0, c - 1));
+    else setKnow((c) => Math.max(0, c - 1));
+    setPracticeIndex(last.index);
+    setCardKey((k) => k + 1);
+    setSwipeDir(null);
+  }
+
+  // Arrow key shortcuts for practice mode
+  useEffect(() => {
+    if (mode !== "practice") return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight") markKnow();
+      else if (e.key === "ArrowLeft") markStillLearning();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  });
 
   function advanceCard() {
     setPracticeIndex((i) => i + 1);
+    setSwipeDir(null);
+    setCardKey((k) => k + 1);
     setShowHint(false);
     setStopwatchRunning(false);
     setStopwatchTime(0);
@@ -173,11 +205,11 @@ export default function QuestionsPage() {
     const isDone = practiceIndex >= practicePool.length;
     return (
       <div>
-        {/* Top bar: Still learning / Know counters */}
+        {/* Top bar: Still practicing / Know counters */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-amber-400 text-sm font-bold text-amber-500">{stillLearning}</span>
-            <span className="text-sm font-medium text-amber-500">Still learning</span>
+            <span className="text-sm font-medium text-amber-500">Still practicing</span>
           </div>
           <button onClick={() => { setMode("view"); setStillLearning(0); setKnow(0); }}
             className="text-sm text-gray-400 hover:text-gray-600">Exit</button>
@@ -194,7 +226,7 @@ export default function QuestionsPage() {
             <div className="flex justify-center gap-8 mb-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-amber-500">{stillLearning}</p>
-                <p className="text-sm text-gray-400">Still learning</p>
+                <p className="text-sm text-gray-400">Still practicing</p>
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-green-600">{know}</p>
@@ -202,52 +234,29 @@ export default function QuestionsPage() {
               </div>
             </div>
             <div className="flex justify-center gap-3">
-              <Button variant="secondary" onClick={() => { setMode("view"); setStillLearning(0); setKnow(0); }}>Back to Questions</Button>
-              <Button onClick={() => { startPractice(); setStillLearning(0); setKnow(0); }}>Practice Again</Button>
+              <Button variant="secondary" onClick={() => { setMode("view"); setStillLearning(0); setKnow(0); setHistory([]); }}>Back to Questions</Button>
+              {stillLearning > 0 && (
+                <Button variant="secondary" onClick={() => {
+                  // Re-practice only the "still practicing" questions
+                  const stillPracticingIds = history.filter((h) => h.action === "learning").map((h) => practicePool[h.index]?.id).filter(Boolean);
+                  const newPool = practicePool.filter((q) => stillPracticingIds.includes(q.id));
+                  if (newPool.length > 0) {
+                    setPracticeIndex(0);
+                    setStillLearning(0);
+                    setKnow(0);
+                    setHistory([]);
+                    setCardKey((k) => k + 1);
+                  }
+                }}>Practice Still Practicing ({stillLearning})</Button>
+              )}
+              <Button onClick={() => { startPractice(); setStillLearning(0); setKnow(0); setHistory([]); }}>Practice All Again</Button>
             </div>
           </div>
         ) : q && (
-          <div style={{ animation: "fadeIn 0.25s ease" }}>
+          <div key={cardKey}>
             {/* Flashcard */}
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 shadow-sm overflow-hidden">
-              {/* Hint + Record bar */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-                <button onClick={() => setShowHint(!showHint)}
-                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-indigo-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  {showHint ? "Hide hint" : "Get a hint"}
-                </button>
-                <div className="flex items-center gap-2">
-                  {recording ? (
-                    <button onClick={stopRecording}
-                      className="flex items-center gap-1.5 text-sm text-red-500">
-                      <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-                      Stop
-                    </button>
-                  ) : (
-                    <button onClick={startRecording} className="text-gray-400 hover:text-gray-600">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Hint panel */}
-              {showHint && (
-                <div className="px-6 py-3 bg-indigo-50/50 border-b border-gray-100 text-sm text-indigo-600" style={{ animation: "slideDown 0.2s ease" }}>
-                  {linkedStories.length > 0 && (
-                    <ul className="space-y-0.5">
-                      {linkedStories.map((t) => <li key={t}>· {t}</li>)}
-                    </ul>
-                  )}
-                  {q.notes && <p className="mt-1 text-xs text-gray-500 whitespace-pre-wrap">{q.notes}</p>}
-                  {linkedStories.length === 0 && !q.notes && <p className="text-gray-400 italic">No hints available</p>}
-                </div>
-              )}
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 shadow-sm overflow-hidden"
+              style={{ animation: swipeDir === "left" ? "swipeLeft 0.3s ease forwards" : swipeDir === "right" ? "swipeRight 0.3s ease forwards" : "cardEnter 0.3s ease" }}>
 
               {/* Question centered */}
               <div className="flex items-center justify-center min-h-[300px] px-12 py-16">
@@ -265,12 +274,29 @@ export default function QuestionsPage() {
                   }`}>
                   {stopwatchRunning ? "Stop" : "Start Timer"}
                 </button>
-                {audioUrl && <audio src={audioUrl} controls className="h-7" />}
+                {audioUrl && (
+                  <div className="flex items-center gap-1.5">
+                    <audio src={audioUrl} controls className="h-7" />
+                    <button onClick={() => setAudioUrl(null)} className="text-gray-400 hover:text-red-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Action buttons: X (still learning) / ✓ (know) */}
+            {/* Action buttons: back / X (still practicing) / ✓ (know) */}
             <div className="mt-6 flex items-center justify-center gap-6">
+              {history.length > 0 && (
+                <button onClick={goBack}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </button>
+              )}
               <button onClick={markStillLearning}
                 className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-red-300 text-red-400 hover:bg-red-50 hover:text-red-500">
                 <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -285,10 +311,13 @@ export default function QuestionsPage() {
               </button>
             </div>
 
-            {/* Progress */}
+            {/* Progress + keyboard hint */}
             <p className="mt-4 text-center text-xs text-gray-400">
               {practiceIndex + 1} of {practicePool.length}
               {filter !== "all" && ` · ${categoryLabels[filter]}`}
+            </p>
+            <p className="mt-1 text-center text-xs text-gray-300">
+              Press <kbd className="rounded border border-gray-200 px-1.5 py-0.5 text-gray-400">←</kbd> still practicing · <kbd className="rounded border border-gray-200 px-1.5 py-0.5 text-gray-400">→</kbd> know
             </p>
           </div>
         )}
