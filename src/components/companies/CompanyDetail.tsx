@@ -335,12 +335,69 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
         {/* Right column — Summary */}
         <div className="space-y-6">
-          {/* Interview Date */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Next Interview</label>
-            <input type="date" value={company.interviewDate} onChange={(e) => update({ interviewDate: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-          </div>
+          {/* Next Interview — auto-detected or manual */}
+          {(() => {
+            const nextEvent = companyEvents.find((ev) => new Date(ev.date + "T12:00:00") >= today);
+            const displayDate = nextEvent?.date ?? company.interviewDate;
+            return (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Next Interview</label>
+                {nextEvent ? (
+                  <div className="rounded-lg border border-gray-200 px-3 py-2">
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(nextEvent.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                    </p>
+                    {nextEvent.startTime && (
+                      <p className="text-xs text-gray-500">{nextEvent.startTime}{nextEvent.endTime ? ` — ${nextEvent.endTime}` : ""}</p>
+                    )}
+                    {nextEvent.interviewType && (
+                      <span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
+                        nextEvent.interviewType === "recruiter-screen" ? "bg-teal-50 text-teal-700" :
+                        nextEvent.interviewType === "behavioral" ? "bg-blue-50 text-blue-600" :
+                        nextEvent.interviewType === "case" ? "bg-purple-50 text-purple-600" :
+                        "bg-gray-100 text-gray-500"
+                      }`}>{
+                        nextEvent.interviewType === "recruiter-screen" ? "Recruiter Screen" :
+                        nextEvent.interviewType === "behavioral" ? "Behavioral" :
+                        nextEvent.interviewType === "case" ? "Case" :
+                        nextEvent.interviewType
+                      }</span>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">Auto-detected from schedule</p>
+                  </div>
+                ) : (
+                  <div>
+                    <input type="date" value={company.interviewDate}
+                      onChange={(e) => {
+                        update({ interviewDate: e.target.value });
+                        if (e.target.value) {
+                          dispatch({
+                            type: "ADD_EVENT",
+                            payload: {
+                              title: `${company.name} — ${company.role}`,
+                              date: e.target.value,
+                              startTime: "",
+                              endTime: "",
+                              category: "interview",
+                              interviewType: null,
+                              interviewStage: null,
+                              companyId: company.id,
+                              companyName: company.name,
+                              role: company.role,
+                              questionsAsked: [],
+                              questionsToAsk: [],
+                              notes: "",
+                            },
+                          });
+                        }
+                      }}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                    <p className="mt-1 text-xs text-gray-400">Set a date to create an event on the schedule</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Quick stats */}
           <div className="rounded-lg border border-gray-200 p-4 space-y-3">
