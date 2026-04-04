@@ -19,6 +19,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
   const [newQuestionAsked, setNewQuestionAsked] = useState("");
   const [newQuestionToAsk, setNewQuestionToAsk] = useState("");
+  const [editingQ, setEditingQ] = useState<{ eventId: string; type: "asked" | "toAsk"; index: number } | null>(null);
+  const [editQValue, setEditQValue] = useState("");
 
   if (!company) {
     return (
@@ -85,20 +87,52 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <input value={company.name} onChange={(e) => update({ name: e.target.value })}
-              className="text-2xl font-bold text-gray-900 bg-transparent border-none focus:outline-none p-0" />
-            {appStatus && (
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[appStatus.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
-                {appStatus}
-              </span>
-            )}
-          </div>
+          <input value={company.name} onChange={(e) => update({ name: e.target.value })}
+            className="text-2xl font-bold text-gray-900 bg-transparent border-none focus:outline-none p-0 w-full" />
           <input value={company.role} onChange={(e) => update({ role: e.target.value })}
             placeholder="Role title"
             className="mt-1 text-sm text-gray-500 bg-transparent border-none focus:outline-none p-0 w-full" />
+          {appStatus && (
+            <span className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[appStatus.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+              {appStatus}
+            </span>
+          )}
         </div>
         <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+      </div>
+
+      {/* Links */}
+      <div className="mb-6 flex flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <input value={company.roleUrl ?? ""} onChange={(e) => update({ roleUrl: e.target.value })}
+            placeholder="Role posting URL"
+            className="text-sm text-indigo-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-indigo-700" />
+          {company.roleUrl && (
+            <a href={company.roleUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-indigo-500">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
+          <input value={company.companyUrl ?? ""} onChange={(e) => update({ companyUrl: e.target.value })}
+            placeholder="Company website"
+            className="text-sm text-indigo-500 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-indigo-700" />
+          {company.companyUrl && (
+            <a href={company.companyUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-indigo-500">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -205,7 +239,19 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           <p className="mb-1 text-xs font-medium text-gray-500">Questions to Ask</p>
                           {ev.questionsToAsk.map((q, qi) => (
                             <div key={qi} className="group flex items-center gap-2 py-0.5">
-                              <span className="flex-1 text-xs text-gray-600">{q}</span>
+                              {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
+                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                  onBlur={() => {
+                                    const updated = [...ev.questionsToAsk]; updated[qi] = editQValue;
+                                    dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsToAsk: updated } } });
+                                    setEditingQ(null);
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                  className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
+                              ) : (
+                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
+                                  className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                              )}
                               <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
                                 className="invisible group-hover:visible text-gray-300 hover:text-red-500">
                                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -228,7 +274,19 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           <p className="mb-1 text-xs font-medium text-gray-500">Questions They Asked</p>
                           {ev.questionsAsked.map((q, qi) => (
                             <div key={qi} className="group flex items-center gap-2 py-0.5">
-                              <span className="flex-1 text-xs text-gray-600">{q}</span>
+                              {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
+                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                  onBlur={() => {
+                                    const updated = [...ev.questionsAsked]; updated[qi] = editQValue;
+                                    dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsAsked: updated } } });
+                                    setEditingQ(null);
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                  className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
+                              ) : (
+                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
+                                  className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                              )}
                               <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
                                 className="invisible group-hover:visible text-gray-300 hover:text-red-500">
                                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

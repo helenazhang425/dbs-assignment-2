@@ -27,6 +27,8 @@ export interface Company {
   role: string;
   status: CompanyStatus;
   interviewDate: string;
+  roleUrl: string;
+  companyUrl: string;
   whyCompany: string;
   whyRole: string;
   notes: string;

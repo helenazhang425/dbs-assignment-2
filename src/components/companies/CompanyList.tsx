@@ -58,6 +58,8 @@ export default function CompanyList() {
         role: role,
         status: "interviewing",
         interviewDate: "",
+        roleUrl: "",
+        companyUrl: "",
         whyCompany: "",
         whyRole: "",
         notes: "",
