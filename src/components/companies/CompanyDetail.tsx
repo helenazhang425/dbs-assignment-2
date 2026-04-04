@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { InterviewType } from "@/types";
@@ -24,6 +24,13 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const [editQValue, setEditQValue] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showAddInterview, setShowAddInterview] = useState(false);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedEventId && detailPanelRef.current) {
+      detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedEventId]);
   const [newEvDate, setNewEvDate] = useState("");
   const [newEvStart, setNewEvStart] = useState("");
   const [newEvEnd, setNewEvEnd] = useState("");
@@ -237,7 +244,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                   if (!ev) return null;
                   const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
                   return (
-                    <div className="flex-1 rounded-lg border border-indigo-100 bg-indigo-50/20 p-5 animate-in slide-in-from-left-4 duration-200" style={{ animation: "slideIn 0.2s ease-out" }}>
+                    <div ref={detailPanelRef} className="flex-1 rounded-lg border border-indigo-100 bg-indigo-50/20 p-5" style={{ animation: "slideIn 0.2s ease-out" }}>
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <p className="text-sm font-medium text-gray-900">{ev.title}</p>
@@ -256,7 +263,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       {/* Prep tasks */}
                       {evTasks.length > 0 && (
                         <div className="mb-4">
-                          <p className="mb-1.5 text-xs font-medium text-gray-500">Prep Tasks ({evTasks.filter((t) => t.completed).length}/{evTasks.length})</p>
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Prep Tasks ({evTasks.filter((t) => t.completed).length}/{evTasks.length})</p>
                           <div className="space-y-1">
                             {evTasks.map((task) => (
                               <div key={task.id} className="flex items-center gap-2">
@@ -272,7 +279,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
                       {/* Questions to Ask */}
                       <div className="mb-4">
-                        <p className="mb-1.5 text-xs font-medium text-gray-500">Questions to Ask</p>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Questions to Ask</p>
                         {ev.questionsToAsk.map((q, qi) => (
                           <div key={qi} className="group flex items-center gap-2 py-0.5">
                             {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
@@ -282,7 +289,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                                 className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
                             ) : (
                               <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
-                                className="flex-1 text-xs text-gray-600 cursor-pointer">• {q}</span>
+                                className="flex-1 text-sm text-gray-600 cursor-pointer">• {q}</span>
                             )}
                             <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
                               className="invisible group-hover:visible text-gray-300 hover:text-red-500">
@@ -302,7 +309,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
                       {/* Questions Asked */}
                       <div>
-                        <p className="mb-1.5 text-xs font-medium text-gray-500">Questions They Asked</p>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Questions They Asked</p>
                         {ev.questionsAsked.map((q, qi) => (
                           <div key={qi} className="group flex items-center gap-2 py-0.5">
                             {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
@@ -312,7 +319,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                                 className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
                             ) : (
                               <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
-                                className="flex-1 text-xs text-gray-600 cursor-pointer">• {q}</span>
+                                className="flex-1 text-sm text-gray-600 cursor-pointer">• {q}</span>
                             )}
                             <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
                               className="invisible group-hover:visible text-gray-300 hover:text-red-500">
