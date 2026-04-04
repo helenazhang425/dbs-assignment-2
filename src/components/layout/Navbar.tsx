@@ -7,8 +7,8 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/applications", label: "Applications" },
   { href: "/companies", label: "Companies" },
-  { href: "/questions", label: "Questions" },
   { href: "/stories", label: "Stories" },
+  { href: "/questions", label: "Questions" },
 ];
 
 export default function Navbar() {
