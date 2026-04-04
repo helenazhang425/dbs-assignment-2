@@ -277,73 +277,70 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                         </div>
                       )}
 
-                      {/* Questions — Chat bubble style */}
-                      <div className="space-y-3">
-                        {/* Questions They Asked — left aligned, like received messages */}
-                        <div>
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">They asked</p>
-                          <div className="space-y-1.5">
-                            {ev.questionsAsked.map((q, qi) => (
-                              <div key={qi} className="group flex items-start gap-1.5 max-w-[85%]">
-                                {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
-                                  <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
-                                    onBlur={() => { const u = [...ev.questionsAsked]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsAsked: u } } }); setEditingQ(null); }}
-                                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
-                                    className="flex-1 rounded-lg border border-indigo-300 px-2.5 py-1.5 text-sm focus:outline-none" />
-                                ) : (
-                                  <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
-                                    className="cursor-pointer rounded-2xl rounded-tl-sm bg-gray-100 px-3 py-1.5 text-sm text-gray-700">{q}</span>
-                                )}
-                                <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
-                                  className="mt-1 invisible group-hover:visible text-gray-300 hover:text-red-500 flex-shrink-0">
-                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-                              </div>
-                            ))}
-                            <input placeholder="+ Add question they asked" onKeyDown={(e) => {
-                              if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                                dispatch({ type: "ADD_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
-                                (e.target as HTMLInputElement).value = "";
-                              }
-                            }} className="text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
-                          </div>
-                        </div>
+                      {/* Questions They Asked */}
+                      <div className="mb-3">
+                        <p className="mb-1.5 text-xs font-semibold text-gray-500">Questions They Asked</p>
+                        <ul className="space-y-1 pl-4">
+                          {ev.questionsAsked.map((q, qi) => (
+                            <li key={qi} className="group flex items-start gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                              {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
+                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                  onBlur={() => { const u = [...ev.questionsAsked]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsAsked: u } } }); setEditingQ(null); }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                  className="flex-1 rounded border border-indigo-300 px-2 py-0.5 text-sm focus:outline-none" />
+                              ) : (
+                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
+                                  className="flex-1 text-sm text-gray-600 cursor-pointer">{q}</span>
+                              )}
+                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
+                                className="mt-0.5 invisible group-hover:visible text-gray-300 hover:text-red-500 flex-shrink-0">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <input placeholder="+ Add question" onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                            dispatch({ type: "ADD_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }} className="ml-4 mt-1 text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-0.5" />
+                      </div>
 
-                        {/* Questions to Ask — right aligned, like sent messages */}
-                        <div>
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 text-right">You want to ask</p>
-                          <div className="space-y-1.5">
-                            {ev.questionsToAsk.map((q, qi) => (
-                              <div key={qi} className="group flex items-start gap-1.5 justify-end">
-                                <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
-                                  className="mt-1 invisible group-hover:visible text-gray-300 hover:text-red-500 flex-shrink-0">
-                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-                                {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
-                                  <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
-                                    onBlur={() => { const u = [...ev.questionsToAsk]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsToAsk: u } } }); setEditingQ(null); }}
-                                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
-                                    className="flex-1 max-w-[85%] rounded-lg border border-indigo-300 px-2.5 py-1.5 text-sm focus:outline-none" />
-                                ) : (
-                                  <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
-                                    className="cursor-pointer rounded-2xl rounded-tr-sm bg-indigo-50 px-3 py-1.5 text-sm text-indigo-700 max-w-[85%]">{q}</span>
-                                )}
-                              </div>
-                            ))}
-                            <div className="flex justify-end">
-                              <input placeholder="+ Add question to ask" onKeyDown={(e) => {
-                                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                                  dispatch({ type: "ADD_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
-                                  (e.target as HTMLInputElement).value = "";
-                                }
-                              }} className="text-right text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
-                            </div>
-                          </div>
-                        </div>
+                      {/* Questions to Ask */}
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold text-gray-500">Questions to Ask</p>
+                        <ul className="space-y-1 pl-4">
+                          {ev.questionsToAsk.map((q, qi) => (
+                            <li key={qi} className="group flex items-start gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
+                              {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
+                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                  onBlur={() => { const u = [...ev.questionsToAsk]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsToAsk: u } } }); setEditingQ(null); }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                  className="flex-1 rounded border border-indigo-300 px-2 py-0.5 text-sm focus:outline-none" />
+                              ) : (
+                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
+                                  className="flex-1 text-sm text-gray-600 cursor-pointer">{q}</span>
+                              )}
+                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
+                                className="mt-0.5 invisible group-hover:visible text-gray-300 hover:text-red-500 flex-shrink-0">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <input placeholder="+ Add question" onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                            dispatch({ type: "ADD_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }} className="ml-4 mt-1 text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-0.5" />
                       </div>
 
                       {ev.notes && <p className="mt-3 text-xs text-gray-400 border-t border-gray-100 pt-2">{ev.notes}</p>}
