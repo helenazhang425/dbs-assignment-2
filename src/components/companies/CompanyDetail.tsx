@@ -139,47 +139,58 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         <button onClick={addRole} className="text-sm text-indigo-500 hover:text-indigo-700">+ Add role</button>
       </div>
 
-      <div className="space-y-4">
+      {/* Role grid cards */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {activeRoles.map((role) => {
-          const isExpanded = expandedRoleId === role.id;
           const events = getRoleEvents(role.title);
           const nextEv = events.find((ev) => new Date(ev.date + "T12:00:00") >= today);
+          const isSelected = expandedRoleId === role.id;
 
           return (
-            <div key={role.id} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              {/* Card header — always visible */}
-              <div className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => { setExpandedRoleId(isExpanded ? null : role.id); setSelectedEventId(null); }}>
-                <svg className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{role.title || "Untitled Role"}</p>
-                  {nextEv && (
-                    <p className="text-xs text-gray-400">
-                      Next: {new Date(nextEv.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      {nextEv.startTime ? ` at ${nextEv.startTime}` : ""}
-                      {nextEv.interviewType ? ` · ${nextEv.interviewType === "recruiter-screen" ? "Recruiter Screen" : nextEv.interviewType}` : ""}
-                    </p>
-                  )}
-                </div>
+            <div key={role.id}
+              onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
+              className={`rounded-xl border p-5 cursor-pointer transition-all ${
+                isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
+                "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
+              }`}>
+              <div className="flex items-start justify-between">
+                <h3 className="font-semibold text-gray-900">{role.title || "Untitled Role"}</h3>
                 <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700">In Process</span>
-                <button onClick={(e) => { e.stopPropagation(); deleteRole(role.id); }}
-                  className="text-gray-300 hover:text-red-500">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
               </div>
+              {nextEv && (
+                <p className="mt-1 text-xs text-indigo-500">
+                  Next: {new Date(nextEv.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {nextEv.startTime ? ` at ${nextEv.startTime}` : ""}
+                  {nextEv.interviewType ? ` · ${nextEv.interviewType === "recruiter-screen" ? "Recruiter Screen" : nextEv.interviewType}` : ""}
+                </p>
+              )}
+              <div className="mt-2 flex gap-3 text-xs text-gray-400">
+                <span>{events.length} {events.length === 1 ? "round" : "rounds"}</span>
+                {role.roleUrl && <span>Job posting ↗</span>}
+              </div>
+            </div>
+          );
+        })}
+        {/* Add role card */}
+        <div onClick={addRole}
+          className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 p-5 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
+          <span className="text-sm">+ Add role</span>
+        </div>
+      </div>
 
-              {/* Expanded content */}
-              {isExpanded && (
-                <div className="border-t border-gray-100 px-5 py-4 space-y-4" style={{ animation: "slideIn 0.2s ease-out" }}>
-                  {/* Role title + URL */}
-                  <div className="flex items-center gap-2">
-                    <input value={role.title} onChange={(e) => updateRole(role.id, { title: e.target.value })}
-                      placeholder="Role title"
-                      className="text-sm font-medium text-gray-700 bg-transparent border-none focus:outline-none p-0 flex-1" />
+      {/* Expanded role detail */}
+      {expandedRoleId && (() => {
+        const role = company.roles.find((r) => r.id === expandedRoleId);
+        if (!role) return null;
+        const events = getRoleEvents(role.title);
+        return (
+          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideIn 0.2s ease-out" }}>
+            {/* Role title + URL */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1">
+                <input value={role.title} onChange={(e) => updateRole(role.id, { title: e.target.value })}
+                  placeholder="Role title"
+                  className="text-lg font-semibold text-gray-900 bg-transparent border-none focus:outline-none p-0 flex-1" />
                     <div className="flex items-center gap-1">
                       <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -372,11 +383,9 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })()}
 
       {archivedRoles.length > 0 && (
         <div className="mt-6">
