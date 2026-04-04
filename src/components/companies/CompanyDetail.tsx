@@ -21,6 +21,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const [newQuestionToAsk, setNewQuestionToAsk] = useState("");
   const [editingQ, setEditingQ] = useState<{ eventId: string; type: "asked" | "toAsk"; index: number } | null>(null);
   const [editQValue, setEditQValue] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   if (!company) {
     return (
@@ -38,7 +39,10 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   }
 
   // Get application status
-  const appStatus = state.applications.find((a) => a.company.toLowerCase() === company.name.toLowerCase())?.verdict ?? null;
+  const appStatus = state.applications.find((a) =>
+    a.company.toLowerCase() === company.name.toLowerCase() &&
+    (!company.role || a.role.toLowerCase() === company.role.toLowerCase())
+  )?.verdict ?? state.applications.find((a) => a.company.toLowerCase() === company.name.toLowerCase())?.verdict ?? null;
 
   // Get all events for this company (past and future)
   const companyEvents = state.events
@@ -165,150 +169,158 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
             {companyEvents.length === 0 ? (
               <p className="text-sm text-gray-400">No interviews scheduled. Add events on the Dashboard.</p>
             ) : (
-              <div className="relative pl-6">
-                {/* Vertical line */}
-                <div className="absolute left-2.5 top-0 bottom-0 w-px bg-gray-200" />
-
-                {companyEvents.map((ev, i) => {
-                  const isPast = new Date(ev.date + "T12:00:00") < today;
-                  const isToday = new Date(ev.date + "T12:00:00").toDateString() === today.toDateString();
-                  const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
-
-                  return (
-                    <div key={ev.id} className="relative pb-6 last:pb-0">
-                      {/* Dot */}
-                      <div className={`absolute -left-3.5 top-1 h-3 w-3 rounded-full border-2 ${
-                        isToday ? "border-indigo-500 bg-indigo-500" :
-                        isPast ? "border-gray-400 bg-gray-400" :
-                        "border-indigo-300 bg-white"
-                      }`} />
-
-                      <div className={`rounded-lg border p-4 ${isPast ? "border-gray-100 bg-gray-50" : "border-gray-200 bg-white"}`}>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className={`text-sm font-medium ${isPast ? "text-gray-500" : "text-gray-900"}`}>
-                              {ev.title}
-                            </p>
-                            <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
-                              <span>{new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
-                              {ev.startTime && <span>{ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
+              <div className="flex gap-6">
+                {/* Compact timeline */}
+                <div className="relative pl-6 flex-shrink-0" style={{ minWidth: "260px" }}>
+                  <div className="absolute left-2.5 top-0 bottom-0 w-px bg-gray-200" />
+                  {companyEvents.map((ev) => {
+                    const isPast = new Date(ev.date + "T12:00:00") < today;
+                    const isSelected = selectedEventId === ev.id;
+                    return (
+                      <div key={ev.id} className="relative pb-4 last:pb-0">
+                        <div className={`absolute -left-3.5 top-2 h-3 w-3 rounded-full border-2 ${
+                          isSelected ? "border-indigo-500 bg-indigo-500" :
+                          isPast ? "border-gray-400 bg-gray-400" :
+                          "border-indigo-300 bg-white"
+                        }`} />
+                        <button onClick={() => setSelectedEventId(isSelected ? null : ev.id)}
+                          className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
+                            isSelected ? "border-indigo-300 bg-indigo-50" :
+                            isPast ? "border-gray-100 bg-gray-50 hover:border-gray-200" :
+                            "border-gray-200 bg-white hover:border-indigo-200"
+                          }`}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs ${isPast ? "text-gray-400" : "text-gray-600"}`}>
+                              {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                            </span>
                             {ev.interviewType && (
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${
                                 ev.interviewType === "recruiter-screen" ? "bg-teal-50 text-teal-700" :
                                 ev.interviewType === "behavioral" ? "bg-blue-50 text-blue-600" :
                                 ev.interviewType === "case" ? "bg-purple-50 text-purple-600" :
                                 "bg-gray-100 text-gray-500"
                               }`}>{
-                                ev.interviewType === "recruiter-screen" ? "Recruiter Screen" :
+                                ev.interviewType === "recruiter-screen" ? "Recruiter" :
                                 ev.interviewType === "behavioral" ? "Behavioral" :
                                 ev.interviewType === "case" ? "Case" :
-                                ev.interviewType === "presentation" ? "Presentation" :
                                 ev.interviewType
                               }</span>
                             )}
-                            {isToday && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">Today</span>}
                           </div>
-                        </div>
-
-                        {/* Prep tasks */}
-                        {evTasks.length > 0 && (
-                          <div className="mt-3 border-t border-gray-100 pt-2">
-                            <p className="mb-1 text-xs text-gray-400">
-                              {evTasks.filter((t) => t.completed).length}/{evTasks.length} prep tasks
+                          {ev.startTime && (
+                            <p className={`mt-0.5 text-xs ${isPast ? "text-gray-300" : "text-gray-400"}`}>
+                              {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
                             </p>
-                            <div className="space-y-1">
-                              {evTasks.map((task) => (
-                                <div key={task.id} className="flex items-center gap-2">
-                                  <input type="checkbox" checked={task.completed}
-                                    onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
-                                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                                  <span className={`text-xs ${task.completed ? "text-gray-400 line-through" : "text-gray-600"}`}>
-                                    {task.text}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Questions to Ask */}
-                        <div className="mt-3 border-t border-gray-100 pt-2">
-                          <p className="mb-1 text-xs font-medium text-gray-500">Questions to Ask</p>
-                          {ev.questionsToAsk.map((q, qi) => (
-                            <div key={qi} className="group flex items-center gap-2 py-0.5">
-                              {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
-                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
-                                  onBlur={() => {
-                                    const updated = [...ev.questionsToAsk]; updated[qi] = editQValue;
-                                    dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsToAsk: updated } } });
-                                    setEditingQ(null);
-                                  }}
-                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
-                                  className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
-                              ) : (
-                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
-                                  className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
-                              )}
-                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
-                                className="invisible group-hover:visible text-gray-300 hover:text-red-500">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                          <input placeholder="+ Add question to ask" onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                              dispatch({ type: "ADD_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }}
-                            className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
-                        </div>
-
-                        {/* Questions Asked */}
-                        <div className="mt-2 border-t border-gray-100 pt-2">
-                          <p className="mb-1 text-xs font-medium text-gray-500">Questions They Asked</p>
-                          {ev.questionsAsked.map((q, qi) => (
-                            <div key={qi} className="group flex items-center gap-2 py-0.5">
-                              {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
-                                <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
-                                  onBlur={() => {
-                                    const updated = [...ev.questionsAsked]; updated[qi] = editQValue;
-                                    dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsAsked: updated } } });
-                                    setEditingQ(null);
-                                  }}
-                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
-                                  className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
-                              ) : (
-                                <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
-                                  className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
-                              )}
-                              <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
-                                className="invisible group-hover:visible text-gray-300 hover:text-red-500">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                          <input placeholder="+ Add question they asked" onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                              dispatch({ type: "ADD_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }}
-                            className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
-                        </div>
-
-                        {ev.notes && <p className="mt-2 text-xs text-gray-400">{ev.notes}</p>}
+                          )}
+                        </button>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Detail panel */}
+                {selectedEventId && (() => {
+                  const ev = companyEvents.find((e) => e.id === selectedEventId);
+                  if (!ev) return null;
+                  const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
+                  return (
+                    <div className="flex-1 rounded-lg border border-indigo-100 bg-indigo-50/20 p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{ev.title}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(ev.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                            {ev.startTime ? ` · ${ev.startTime}${ev.endTime ? ` — ${ev.endTime}` : ""}` : ""}
+                          </p>
+                        </div>
+                        <button onClick={() => setSelectedEventId(null)} className="text-gray-400 hover:text-gray-600">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Prep tasks */}
+                      {evTasks.length > 0 && (
+                        <div className="mb-4">
+                          <p className="mb-1.5 text-xs font-medium text-gray-500">Prep Tasks ({evTasks.filter((t) => t.completed).length}/{evTasks.length})</p>
+                          <div className="space-y-1">
+                            {evTasks.map((task) => (
+                              <div key={task.id} className="flex items-center gap-2">
+                                <input type="checkbox" checked={task.completed}
+                                  onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: task.id } })}
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                <span className={`text-xs ${task.completed ? "text-gray-400 line-through" : "text-gray-600"}`}>{task.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Questions to Ask */}
+                      <div className="mb-4">
+                        <p className="mb-1.5 text-xs font-medium text-gray-500">Questions to Ask</p>
+                        {ev.questionsToAsk.map((q, qi) => (
+                          <div key={qi} className="group flex items-center gap-2 py-0.5">
+                            {editingQ?.eventId === ev.id && editingQ.type === "toAsk" && editingQ.index === qi ? (
+                              <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                onBlur={() => { const u = [...ev.questionsToAsk]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsToAsk: u } } }); setEditingQ(null); }}
+                                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
+                            ) : (
+                              <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
+                                className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                            )}
+                            <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
+                              className="invisible group-hover:visible text-gray-300 hover:text-red-500">
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                        <input placeholder="+ Add question" onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                            dispatch({ type: "ADD_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }} className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
+                      </div>
+
+                      {/* Questions Asked */}
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium text-gray-500">Questions They Asked</p>
+                        {ev.questionsAsked.map((q, qi) => (
+                          <div key={qi} className="group flex items-center gap-2 py-0.5">
+                            {editingQ?.eventId === ev.id && editingQ.type === "asked" && editingQ.index === qi ? (
+                              <input value={editQValue} onChange={(e) => setEditQValue(e.target.value)} autoFocus
+                                onBlur={() => { const u = [...ev.questionsAsked]; u[qi] = editQValue; dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { questionsAsked: u } } }); setEditingQ(null); }}
+                                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingQ(null); }}
+                                className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
+                            ) : (
+                              <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
+                                className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                            )}
+                            <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
+                              className="invisible group-hover:visible text-gray-300 hover:text-red-500">
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                        <input placeholder="+ Add question" onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                            dispatch({ type: "ADD_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, question: (e.target as HTMLInputElement).value.trim() } });
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }} className="w-full text-xs text-gray-400 placeholder-gray-300 bg-transparent border-none focus:outline-none focus:text-gray-600 py-1" />
+                      </div>
+
+                      {ev.notes && <p className="mt-3 text-xs text-gray-400 border-t border-gray-100 pt-2">{ev.notes}</p>}
                     </div>
                   );
-                })}
+                })()}
               </div>
             )}
           </div>

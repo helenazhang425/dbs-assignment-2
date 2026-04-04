@@ -1276,6 +1276,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-4 pt-3 text-xs text-gray-400">
                 <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-indigo-400" /> Interview</span>
                 <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-green-400" /> Practice</span>
+                <span className="flex items-center gap-1.5"><span className="h-1.5 w-4 rounded-full bg-amber-400" /> Networking</span>
               </div>
               {/* Edit form for month view */}
               {editingEventId && (() => {

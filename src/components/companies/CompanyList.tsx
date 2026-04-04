@@ -69,8 +69,11 @@ export default function CompanyList() {
     });
   }
 
-  function getAppStatus(companyName: string) {
-    const app = state.applications.find((a) => a.company.toLowerCase() === companyName.toLowerCase());
+  function getAppStatus(companyName: string, role: string) {
+    const app = state.applications.find((a) =>
+      a.company.toLowerCase() === companyName.toLowerCase() &&
+      (!role || a.role.toLowerCase() === role.toLowerCase())
+    ) ?? state.applications.find((a) => a.company.toLowerCase() === companyName.toLowerCase());
     return app?.verdict ?? null;
   }
 
@@ -117,7 +120,7 @@ export default function CompanyList() {
       {/* Company cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((c) => {
-          const appStatus = getAppStatus(c.name);
+          const appStatus = getAppStatus(c.name, c.role);
           const upcoming = getUpcomingEvents(c.name);
           return (
             <Link key={c.id} href={`/companies/${c.id}`}>
