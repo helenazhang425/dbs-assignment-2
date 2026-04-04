@@ -139,8 +139,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         <button onClick={addRole} className="text-sm text-indigo-500 hover:text-indigo-700">+ Add role</button>
       </div>
 
-      {/* Role grid cards — square */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      {/* Role grid cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {activeRoles.map((role) => {
           const events = getRoleEvents(role.title);
           const nextEv = events.find((ev) => new Date(ev.date + "T12:00:00") >= today);
@@ -150,7 +150,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
             <div key={role.id} className="group/card relative">
               <div
                 onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
-                className={`aspect-square rounded-xl border p-4 cursor-pointer transition-all flex flex-col justify-between ${
+                className={`h-full rounded-xl border p-5 cursor-pointer transition-all flex flex-col justify-between ${
                   isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
                   "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
                 }`}>
@@ -180,7 +180,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         })}
         {/* Add role card */}
         <div onClick={addRole}
-          className="aspect-square flex items-center justify-center rounded-xl border border-dashed border-gray-300 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
+          className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 p-5 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
           <span className="text-sm">+ Add role</span>
         </div>
       </div>

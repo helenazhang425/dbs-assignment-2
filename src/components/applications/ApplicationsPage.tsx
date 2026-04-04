@@ -64,7 +64,7 @@ export default function ApplicationsPage() {
   const [newCompany, setNewCompany] = useState("");
   const [newRole, setNewRole] = useState("");
   const [newDate, setNewDate] = useState("");
-  const [newMethod, setNewMethod] = useState("Company website");
+  const [newMethod, setNewMethod] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newVerdict, setNewVerdict] = useState("No Update");
 
@@ -88,8 +88,11 @@ export default function ApplicationsPage() {
     return Array.from(set).sort();
   }, [state.applications]);
 
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgo = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return d;
+  }, []);
   const activeApps = useMemo(() => state.applications.filter((a) => {
     if (a.archived) return false;
     // Auto-archive after 6 months
@@ -98,7 +101,7 @@ export default function ApplicationsPage() {
       if (appDate < sixMonthsAgo) return false;
     }
     return true;
-  }), [state.applications]);
+  }), [state.applications, sixMonthsAgo]);
   const archivedApps = useMemo(() => state.applications.filter((a) => {
     if (a.archived) return true;
     // Auto-archived (older than 6 months)
@@ -107,7 +110,7 @@ export default function ApplicationsPage() {
       if (appDate < sixMonthsAgo) return true;
     }
     return false;
-  }), [state.applications]);
+  }), [state.applications, sixMonthsAgo]);
 
   const filtered = useMemo(() => {
     let result = activeApps;
@@ -218,7 +221,7 @@ export default function ApplicationsPage() {
       type: "ADD_APPLICATION",
       payload: { company: newCompany.trim(), role: newRole.trim(), appliedDate: newDate, method: newMethod, location: newLocation.trim(), verdict: newVerdict, notes: "", spokeTo: "", archived: false },
     });
-    setNewCompany(""); setNewRole(""); setNewDate(""); setNewMethod("Company website"); setNewLocation(""); setNewVerdict("No Update");
+    setNewCompany(""); setNewRole(""); setNewDate(""); setNewMethod(""); setNewLocation(""); setNewVerdict("No Update");
   }
 
   function handleAddSaved(e: React.FormEvent) {
@@ -290,7 +293,7 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {activeApps.length} applied · {state.savedPositions.length} saved{archivedApps.length > 0 ? ` · ${archivedApps.length} archived` : ""}
+            {filtered.length} applied · {state.savedPositions.length} saved{archivedApps.length > 0 ? ` · ${archivedApps.length} archived` : ""}
           </p>
         </div>
         <Button variant="secondary" onClick={handleExport}>Export CSV</Button>
@@ -307,7 +310,7 @@ export default function ApplicationsPage() {
             tab === "applied" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          Applied ({state.applications.length})
+          Applied ({activeApps.length})
         </button>
         <button
           onClick={() => setTab("saved")}
@@ -405,7 +408,21 @@ export default function ApplicationsPage() {
                         </button>
                       </div>
                       {activeFilter === col.key && (() => {
-                        const allValues = Array.from(new Set(state.applications.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
+                        // Filter options based on other active filters (cross-filtering)
+                        let baseApps: typeof activeApps = activeApps;
+                        if (search) {
+                          const q = search.toLowerCase();
+                          baseApps = baseApps.filter((a) => a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q));
+                        }
+                        Object.entries(columnFilters).forEach(([k, vals]) => {
+                          if (k !== col.key && vals && vals.length > 0) {
+                            baseApps = baseApps.filter((a) => {
+                              const cv = (a as unknown as Record<string, string>)[k]?.toLowerCase() ?? "";
+                              return vals.some((v) => cv.includes(v.toLowerCase()));
+                            });
+                          }
+                        });
+                        const allValues = Array.from(new Set(baseApps.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
                           .sort(col.key === "appliedDate" ? (a, b) => b.localeCompare(a) : undefined);
                         const fq = filterSearch.toLowerCase();
                         const filteredValues = fq ? allValues.filter((v) => v.toLowerCase().includes(fq)) : allValues;
@@ -640,7 +657,7 @@ export default function ApplicationsPage() {
           )}
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
 
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-3 py-3">
@@ -675,7 +692,18 @@ export default function ApplicationsPage() {
                         </button>
                       </div>
                       {savedActiveFilter === col.key && (() => {
-                        const allVals = Array.from(new Set(state.savedPositions.map((p) => (p as unknown as Record<string, string>)[col.key]).filter(Boolean))).sort();
+                        // Cross-filter: options based on other active filters
+                        let baseSaved = state.savedPositions;
+                        if (savedSearch) {
+                          const q = savedSearch.toLowerCase();
+                          baseSaved = baseSaved.filter((p) => p.company.toLowerCase().includes(q) || p.role.toLowerCase().includes(q));
+                        }
+                        Object.entries(savedColumnFilters).forEach(([k, v]) => {
+                          if (k !== col.key && v) {
+                            baseSaved = baseSaved.filter((p) => (p as unknown as Record<string, string>)[k]?.toLowerCase().includes(v.toLowerCase()));
+                          }
+                        });
+                        const allVals = Array.from(new Set(baseSaved.map((p) => (p as unknown as Record<string, string>)[col.key]).filter(Boolean))).sort();
                         const fq = savedFilterSearch.toLowerCase();
                         const filteredVals = fq ? allVals.filter((v) => v.toLowerCase().includes(fq)) : allVals;
                         return (<>
@@ -909,7 +937,21 @@ export default function ApplicationsPage() {
                       </button>
                     </div>
                     {archivedActiveFilter === col.key && (() => {
-                      const allVals = Array.from(new Set(archivedApps.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
+                      // Cross-filter: options based on other active filters
+                      let baseArch = archivedApps;
+                      if (archivedSearch) {
+                        const q = archivedSearch.toLowerCase();
+                        baseArch = baseArch.filter((a) => a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q));
+                      }
+                      Object.entries(archivedColumnFilters).forEach(([k, vals]) => {
+                        if (k !== col.key && vals && vals.length > 0) {
+                          baseArch = baseArch.filter((a) => {
+                            const cv = (a as unknown as Record<string, string>)[k]?.toLowerCase() ?? "";
+                            return vals.some((v) => cv.includes(v.toLowerCase()));
+                          });
+                        }
+                      });
+                      const allVals = Array.from(new Set(baseArch.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
                         .sort(col.key === "appliedDate" ? (a, b) => b.localeCompare(a) : undefined);
                       const fq = archivedFilterSearch.toLowerCase();
                       const filteredVals = fq ? allVals.filter((v) => v.toLowerCase().includes(fq)) : allVals;
@@ -1038,10 +1080,10 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
 
   return (
     <div className="mb-6 flex items-center gap-6">
-      <div className="relative flex-shrink-0" style={{ width: size, height: size }}
+      <div className="relative flex-shrink-0 p-1" style={{ width: size + 8, height: size + 8 }}
         onMouseEnter={() => setHoveringDonut(true)}
         onMouseLeave={() => { setHovered(null); setHoveringDonut(false); }}>
-        <svg width={size} height={size} className="-rotate-90">
+        <svg width={size} height={size} className="-rotate-90" style={{ overflow: "visible" }}>
           <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
           {segments.map((s) => {
             const segLen = total > 0 ? (s.count / total) * circumference : 0;

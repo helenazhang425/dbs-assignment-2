@@ -975,9 +975,9 @@ export default function DashboardPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">{ev.title}</p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{ev.title}</p>
                         {badge && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>{badge.label}</span>
+                          <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>{badge.label}</span>
                         )}
                       </div>
                       {ev.startTime && (
