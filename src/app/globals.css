@@ -79,13 +79,6 @@
   }
 }
 
-/* Fun custom cursor */
-body {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3l3.057-3 11.943 12-12 12L5 21l9-9-9-9z'/%3E%3C/svg%3E") 4 4, auto;
-}
-a, button, [role="button"], input[type="checkbox"], select, label[class*="cursor-pointer"] {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%236366f1' stroke='%234f46e5' stroke-width='1.5'%3E%3Cpath d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z'/%3E%3C/svg%3E") 12 12, pointer;
-}
 
 /* Smooth transitions for all interactive elements */
 * {
