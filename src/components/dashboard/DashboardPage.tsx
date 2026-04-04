@@ -751,7 +751,7 @@ export default function DashboardPage() {
                 {(["list", "week", "month"] as const).map((view) => (
                   <button
                     key={view}
-                    onClick={() => { setCalendarView(view); setSelectedDate(null); }}
+                    onClick={() => { setCalendarView(view); setSelectedDate(null); setEditingEventId(null); }}
                     className={`px-3 py-1 text-xs font-medium capitalize ${
                       view === "list" ? "rounded-l-lg" : view === "month" ? "rounded-r-lg" : ""
                     } ${calendarView === view ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}
@@ -1165,7 +1165,7 @@ export default function DashboardPage() {
                         {dayEvents.map((ev) => (
                           <div
                             key={ev.id}
-                            onClick={(e) => { e.stopPropagation(); setSelectedDate(dateStr); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedDate(dateStr); setEditingEventId(null); }}
                             className={`cursor-pointer rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 ${
                               ev.category === "interview"
                                 ? "bg-indigo-100 text-indigo-700"
@@ -1486,18 +1486,27 @@ function SelectedDatePanel({
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
                   <span className="text-sm font-medium text-gray-900">{ev.title}</span>
-                  <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
-                    ev.category === "interview" ? "bg-indigo-100 text-indigo-700" : "bg-green-100 text-green-700"
-                  }`}>{(() => {
-                    const typeConfig: Record<string, string> = {
-                      behavioral: "Behavioral", case: "Case", "recruiter-screen": "Recruiter Screen",
-                      presentation: "Presentation", mixed: "Mixed",
-                    };
+                  {(() => {
                     const iType = (ev as unknown as { interviewType?: string }).interviewType;
-                    return iType
-                      ? typeConfig[iType] ?? (ev.category === "interview" ? "Interview" : "Practice")
-                      : ev.category === "interview" ? "Interview" : ev.category === "practice" ? "Practice" : ev.category === "networking" ? "Networking" : "Other";
-                  })()}</span>
+                    const typeColors: Record<string, { label: string; cls: string }> = {
+                      behavioral: { label: "Behavioral", cls: "bg-blue-50 text-blue-600" },
+                      case: { label: "Case", cls: "bg-purple-50 text-purple-600" },
+                      "recruiter-screen": { label: "Recruiter Screen", cls: "bg-teal-50 text-teal-700" },
+                      presentation: { label: "Presentation", cls: "bg-orange-50 text-orange-600" },
+                      mixed: { label: "Mixed", cls: "bg-pink-50 text-pink-600" },
+                    };
+                    const badge = iType ? typeColors[iType] ?? null : null;
+                    if (badge) {
+                      return <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>{badge.label}</span>;
+                    }
+                    return (
+                      <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
+                        ev.category === "interview" ? "bg-indigo-100 text-indigo-700" :
+                        ev.category === "networking" ? "bg-amber-100 text-amber-700" :
+                        "bg-green-100 text-green-700"
+                      }`}>{ev.category === "interview" ? "Interview" : ev.category === "practice" ? "Practice" : ev.category === "networking" ? "Networking" : "Other"}</span>
+                    );
+                  })()}
                 </div>
                 {ev.startTime && (
                   <p className="mt-1 ml-4 text-xs text-gray-500">
