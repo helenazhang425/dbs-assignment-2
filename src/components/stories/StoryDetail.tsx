@@ -30,13 +30,13 @@ export default function StoryDetail({
 
   // Questions linked to this story
   const linkedQuestions = useMemo(() =>
-    state.questions.filter((q) => q.storyId === story.id),
+    state.questions.filter((q) => q.storyIds.includes(story.id)),
   [state.questions, story.id]);
 
-  // Unlinked questions available to link
+  // Questions not yet linked to this story
   const availableQuestions = useMemo(() =>
-    state.questions.filter((q) => !q.storyId),
-  [state.questions]);
+    state.questions.filter((q) => !q.storyIds.includes(story.id)),
+  [state.questions, story.id]);
 
   function updateField(field: string, value: string) {
     dispatch({
@@ -132,8 +132,7 @@ export default function StoryDetail({
             {editingField === key ? (
               <textarea defaultValue={value} autoFocus rows={4}
                 onBlur={(e) => updateField(key, e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
-                className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
+                className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y" />
             ) : (
               <div onClick={() => setEditingField(key)}
                 className="cursor-text rounded-lg px-3 py-2 -mx-3 -my-1 hover:bg-gray-50 min-h-[4rem]">
@@ -155,8 +154,7 @@ export default function StoryDetail({
         {editingField === "learning" ? (
           <textarea defaultValue={story.learning} autoFocus rows={3}
             onBlur={(e) => updateField("learning", e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
-            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
+            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y" />
         ) : (
           <div onClick={() => setEditingField("learning")}
             className="cursor-text rounded-lg px-3 py-2 -mx-3 -my-1 hover:bg-gray-50 min-h-[3rem]">
@@ -178,7 +176,7 @@ export default function StoryDetail({
           <div className="mb-3 rounded-lg border border-gray-200 bg-white p-2 max-h-40 overflow-y-auto" style={{ animation: "slideDown 0.2s ease" }}>
             {availableQuestions.map((q) => (
               <button key={q.id} onClick={() => {
-                dispatch({ type: "UPDATE_QUESTION", payload: { id: q.id, updates: { storyId: story.id } } });
+                dispatch({ type: "UPDATE_QUESTION", payload: { id: q.id, updates: { storyIds: [...q.storyIds, story.id] } } });
               }}
                 className="block w-full px-3 py-1.5 text-left text-xs text-gray-600 rounded hover:bg-indigo-50">
                 {q.text}
@@ -190,16 +188,15 @@ export default function StoryDetail({
           <p className="mb-3 text-xs text-gray-400">No unlinked questions available. Add questions on the Questions page first.</p>
         )}
         {linkedQuestions.length > 0 ? (
-          <div className="space-y-1.5">
+          <div className="divide-y divide-gray-100">
             {linkedQuestions.map((q) => (
-              <div key={q.id} className="grid grid-cols-2 gap-3 rounded-lg border border-gray-100 px-3 py-2 group">
+              <div key={q.id} className="grid grid-cols-2 gap-3 px-3 py-3 group items-start">
                 <span className="text-sm text-gray-600">{q.text}</span>
                 <div className="flex items-center gap-2">
-                  <input defaultValue={q.notes} placeholder="Notes..."
+                  <textarea defaultValue={q.notes} placeholder="Notes..." rows={2}
                     onBlur={(e) => dispatch({ type: "UPDATE_QUESTION", payload: { id: q.id, updates: { notes: e.target.value } } })}
-                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                    className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-transparent border-none focus:outline-none hover:bg-gray-50 rounded px-1" />
-                  <button onClick={() => dispatch({ type: "UPDATE_QUESTION", payload: { id: q.id, updates: { storyId: null } } })}
+                    className="flex-1 text-sm text-gray-500 placeholder-gray-300 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-300 focus:bg-white resize-none" />
+                  <button onClick={() => dispatch({ type: "UPDATE_QUESTION", payload: { id: q.id, updates: { storyIds: q.storyIds.filter((sid) => sid !== story.id) } } })}
                     className="invisible group-hover:visible text-gray-300 hover:text-red-500 flex-shrink-0">
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -238,7 +235,7 @@ export default function StoryDetail({
             <div className="rounded-xl border border-amber-100 bg-amber-50 p-5">
               <h4 className="mb-3 text-sm font-semibold text-amber-800">Quick improvements</h4>
               <div className="space-y-2">
-                {improvementTips.map((tip, i) => (
+                {improvementTips.filter((tip) => !story.feedback.some((f) => f.text === tip)).map((tip, i) => (
                   <button key={i} onClick={() => addTipAsFeedback(tip)}
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-amber-700 hover:bg-amber-100">
                     <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

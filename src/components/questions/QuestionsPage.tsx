@@ -39,7 +39,7 @@ export default function QuestionsPage() {
       payload: {
         text: formText.trim(),
         category: formCategory,
-        storyId: null,
+        storyIds: [],
         notes: formNotes.trim(),
       },
     });
@@ -49,9 +49,9 @@ export default function QuestionsPage() {
     setShowAdd(false);
   }
 
-  function getLinkedStoryTitle(storyId: string | null) {
-    if (!storyId) return null;
-    return state.stories.find((s) => s.id === storyId)?.title ?? null;
+  function getLinkedStoryTitles(storyIds: string[]) {
+    if (!storyIds.length) return [];
+    return storyIds.map((id) => state.stories.find((s) => s.id === id)?.title).filter(Boolean) as string[];
   }
 
   return (
@@ -89,7 +89,7 @@ export default function QuestionsPage() {
       <div className="space-y-3">
         {filtered.map((q) => {
           const expanded = expandedId === q.id;
-          const storyTitle = getLinkedStoryTitle(q.storyId);
+          const storyTitles = getLinkedStoryTitles(q.storyIds);
           return (
             <div
               key={q.id}
@@ -117,9 +117,9 @@ export default function QuestionsPage() {
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge category={q.category}>{categoryLabels[q.category]}</Badge>
-                    {storyTitle && (
+                    {storyTitles.length > 0 && (
                       <span className="text-xs text-indigo-500">
-                        Linked: {storyTitle}
+                        Linked: {storyTitles.join(", ")}
                       </span>
                     )}
                   </div>
@@ -155,28 +155,27 @@ export default function QuestionsPage() {
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                   <label className="mb-1 mt-3 block text-xs font-medium text-gray-500">
-                    Link to Story
+                    Linked Stories
                   </label>
-                  <select
-                    value={q.storyId ?? ""}
-                    onChange={(e) =>
-                      dispatch({
-                        type: "UPDATE_QUESTION",
-                        payload: {
-                          id: q.id,
-                          updates: { storyId: e.target.value || null },
-                        },
-                      })
-                    }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="">None</option>
-                    {state.stories.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {state.stories.map((s) => {
+                      const isLinked = q.storyIds.includes(s.id);
+                      return (
+                        <label key={s.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 cursor-pointer">
+                          <input type="checkbox" checked={isLinked}
+                            onChange={() => dispatch({
+                              type: "UPDATE_QUESTION",
+                              payload: {
+                                id: q.id,
+                                updates: { storyIds: isLinked ? q.storyIds.filter((sid) => sid !== s.id) : [...q.storyIds, s.id] },
+                              },
+                            })}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                          <span className={isLinked ? "text-indigo-600 font-medium" : "text-gray-600"}>{s.title}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

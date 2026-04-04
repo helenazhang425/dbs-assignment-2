@@ -27,19 +27,10 @@ const IMPROVEMENT_TIPS = [
 
 export default function StoriesPage() {
   const { state, dispatch } = useApp();
-  const [showAdd, setShowAdd] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  // Form state
-  const [formTitle, setFormTitle] = useState("");
-  const [formSituation, setFormSituation] = useState("");
-  const [formTask, setFormTask] = useState("");
-  const [formAction, setFormAction] = useState("");
-  const [formResult, setFormResult] = useState("");
-  const [formLearning, setFormLearning] = useState("");
-  const [formTags, setFormTags] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const selectedStory = state.stories.find((s) => s.id === selectedId);
 
@@ -68,31 +59,38 @@ export default function StoriesPage() {
     if (activeTag) {
       result = result.filter((s) => s.tags.includes(activeTag));
     }
-    return result;
+    // Sort: most linked questions first, then most recently updated
+    return [...result].sort((a, b) => {
+      const aLinks = state.questions.filter((q) => q.storyIds.includes(a.id)).length;
+      const bLinks = state.questions.filter((q) => q.storyIds.includes(b.id)).length;
+      if (aLinks !== bLinks) return bLinks - aLinks;
+      return b.updatedAt - a.updatedAt;
+    });
   }, [state.stories, search, activeTag]);
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formTitle.trim()) return;
+  function handleAdd() {
     dispatch({
       type: "ADD_STORY",
       payload: {
-        title: formTitle.trim(),
-        situation: formSituation.trim(),
-        task: formTask.trim(),
-        action: formAction.trim(),
-        result: formResult.trim(),
-        learning: formLearning.trim(),
-        tags: formTags.split(",").map((t) => t.trim()).filter(Boolean),
+        title: "Untitled Story",
+        situation: "",
+        task: "",
+        action: "",
+        result: "",
+        learning: "",
+        tags: [],
       },
     });
-    resetForm();
-    setShowAdd(false);
+    // Select will happen via useEffect watching stories length
+    setWaitingForNew(true);
   }
 
-  function resetForm() {
-    setFormTitle(""); setFormSituation(""); setFormTask("");
-    setFormAction(""); setFormResult(""); setFormLearning(""); setFormTags("");
+  const [waitingForNew, setWaitingForNew] = useState(false);
+  // When a new story is added, navigate to it
+  if (waitingForNew && state.stories.length > 0) {
+    const newest = state.stories[state.stories.length - 1];
+    setWaitingForNew(false);
+    setSelectedId(newest.id);
   }
 
   if (selectedStory) {
@@ -116,7 +114,7 @@ export default function StoriesPage() {
             {activeTag && <span> tagged &ldquo;{activeTag}&rdquo;</span>}
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)}>Add Story</Button>
+        <Button onClick={handleAdd}>Add Story</Button>
       </div>
 
       {/* Search + Tag Filters */}
@@ -145,7 +143,7 @@ export default function StoriesPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {filtered.map((story) => {
           const unresolvedFeedback = story.feedback.filter((f) => !f.resolved).length;
-          const linkedQCount = state.questions.filter((q) => q.storyId === story.id).length;
+          const linkedQCount = state.questions.filter((q) => q.storyIds.includes(story.id)).length;
           const missingSections = [
             !story.situation && "S",
             !story.task && "T",
@@ -154,10 +152,15 @@ export default function StoriesPage() {
           ].filter(Boolean);
           const isIncomplete = missingSections.length > 0 || unresolvedFeedback > 0;
           return (
-            <div key={story.id} onClick={() => setSelectedId(story.id)}
-              className={`cursor-pointer rounded-xl border bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${
+            <div key={story.id} className={`relative group cursor-pointer rounded-xl border bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${
                 isIncomplete ? "border-amber-200" : "border-gray-200"
-              }`}>
+              }`} onClick={() => setSelectedId(story.id)}>
+              <button onClick={(e) => { e.stopPropagation(); setDeleteId(story.id); }}
+                className="absolute top-3 right-3 invisible group-hover:visible rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
               <div className="flex items-start justify-between">
                 <h3 className="font-semibold text-gray-900">{story.title}</h3>
                 {isIncomplete && (
@@ -194,55 +197,16 @@ export default function StoriesPage() {
         <div className="py-12 text-center text-sm text-gray-400">No stories yet. Add your first STAR story to get started.</div>
       )}
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add STAR Story">
-        <form onSubmit={handleAdd} className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
-            <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="e.g. Led cross-team migration project" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Situation</label>
-            <textarea value={formSituation} onChange={(e) => setFormSituation(e.target.value)} rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="What was the context?" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Task</label>
-            <textarea value={formTask} onChange={(e) => setFormTask(e.target.value)} rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="What were you responsible for?" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Action</label>
-            <textarea value={formAction} onChange={(e) => setFormAction(e.target.value)} rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="What did you do?" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Result</label>
-            <textarea value={formResult} onChange={(e) => setFormResult(e.target.value)} rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="What was the outcome?" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Learning</label>
-            <textarea value={formLearning} onChange={(e) => setFormLearning(e.target.value)} rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="What did you learn?" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
-            <input type="text" value={formTags} onChange={(e) => setFormTags(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="e.g. leadership, teamwork, technical" />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" type="button" onClick={() => { resetForm(); setShowAdd(false); }}>Cancel</Button>
-            <Button type="submit">Add Story</Button>
-          </div>
-        </form>
+      <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete story?">
+        <p className="text-sm text-gray-600 mb-4">
+          Are you sure you want to delete <span className="font-medium text-gray-900">{state.stories.find((s) => s.id === deleteId)?.title}</span>?
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setDeleteId(null)}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => { dispatch({ type: "DELETE_STORY", payload: { id: deleteId! } }); setDeleteId(null); }}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700">Delete</button>
+        </div>
       </Modal>
     </div>
   );

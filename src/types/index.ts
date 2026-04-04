@@ -5,7 +5,7 @@ export interface Question {
   text: string;
   category: QuestionCategory;
   practiced: boolean;
-  storyId: string | null;
+  storyIds: string[];
   notes: string;
   createdAt: number;
 }

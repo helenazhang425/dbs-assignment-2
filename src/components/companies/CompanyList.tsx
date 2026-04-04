@@ -208,7 +208,7 @@ export default function CompanyList() {
               : "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
           }`}>
             <h3 className={`font-semibold ${isArchived ? "text-gray-500" : "text-gray-900"}`}>{c.name}</h3>
-            <div className="mt-1 flex flex-wrap gap-1.5">
+            <div className="mt-1 flex flex-col gap-1.5">
               {c.roles.filter((r) => r.status !== "no-update" && r.status !== "saved").map((r) => {
                 const roleEvents = state.events.filter((ev) =>
                   ev.companyName?.toLowerCase() === c.name.toLowerCase() &&
