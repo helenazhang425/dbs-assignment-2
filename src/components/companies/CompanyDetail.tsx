@@ -159,6 +159,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     <p className="text-xs text-gray-400">
                       Next: {new Date(nextEv.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       {nextEv.startTime ? ` at ${nextEv.startTime}` : ""}
+                      {nextEv.interviewType ? ` · ${nextEv.interviewType === "recruiter-screen" ? "Recruiter Screen" : nextEv.interviewType}` : ""}
                     </p>
                   )}
                 </div>
