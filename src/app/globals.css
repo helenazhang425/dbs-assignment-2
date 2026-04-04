@@ -55,22 +55,34 @@
 }
 
 /* Smooth transitions for all interactive elements */
-button, a, input, select, textarea {
-  transition: all 0.15s ease;
+* {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
 }
 
 /* Smooth backdrop appearance */
 div[class*="fixed inset-0 bg-black"] {
-  animation: fadeIn 0.15s ease;
+  animation: fadeIn 0.2s ease;
 }
 
 /* All absolute dropdowns animate in */
 div[class*="absolute z-40"] {
-  animation: slideDown 0.15s ease;
+  animation: slideDown 0.2s ease;
+}
+
+/* Rounded borders and cards */
+div[class*="rounded-xl border"] {
+  animation: fadeIn 0.2s ease;
+}
+
+/* Bulk action bars and filter areas */
+div[class*="rounded-lg bg-indigo-50"] {
+  animation: slideDown 0.2s ease;
 }
 
 /* Expanded panels and detail sections */
-.animate-fadeIn { animation: fadeIn 0.2s ease; }
-.animate-slideDown { animation: slideDown 0.2s ease; }
-.animate-slideUp { animation: slideUp 0.2s ease; }
-.animate-scaleIn { animation: scaleIn 0.2s ease; }
+.animate-fadeIn { animation: fadeIn 0.25s ease; }
+.animate-slideDown { animation: slideDown 0.25s ease; }
+.animate-slideUp { animation: slideUp 0.25s ease; }
+.animate-scaleIn { animation: scaleIn 0.25s ease; }

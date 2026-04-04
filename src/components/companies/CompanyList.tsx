@@ -66,13 +66,31 @@ export default function CompanyList() {
     state.companies.filter((c) => isCompanyArchived(c.roles)),
   [state.companies]);
 
+  const today = new Date(new Date().toDateString());
+
+  function getNextEventDate(companyName: string): number {
+    const upcoming = state.events
+      .filter((ev) => ev.companyName?.toLowerCase() === companyName.toLowerCase() && new Date(ev.date + "T12:00:00") >= today)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return upcoming.length > 0 ? new Date(upcoming[0].date).getTime() : Infinity;
+  }
+
   const filtered = useMemo(() => {
-    if (!search) return activeCompanies;
-    const q = search.toLowerCase();
-    return activeCompanies.filter((c) =>
-      c.name.toLowerCase().includes(q) || c.roles.some((r) => r.title.toLowerCase().includes(q))
-    );
-  }, [activeCompanies, search]);
+    let result = activeCompanies;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((c) =>
+        c.name.toLowerCase().includes(q) || c.roles.some((r) => r.title.toLowerCase().includes(q))
+      );
+    }
+    // Sort by urgency: nearest upcoming interview first, then by creation date
+    return [...result].sort((a, b) => {
+      const aNext = getNextEventDate(a.name);
+      const bNext = getNextEventDate(b.name);
+      if (aNext !== bNext) return aNext - bNext;
+      return b.createdAt - a.createdAt;
+    });
+  }, [activeCompanies, search, state.events]);
 
   const filteredArchived = useMemo(() => {
     if (!archivedSearch) return archivedCompanies;
@@ -125,8 +143,6 @@ export default function CompanyList() {
     });
   }
 
-  const today = new Date(new Date().toDateString());
-
   function renderCompanyCard(c: typeof state.companies[0], isArchived = false) {
     const upcoming = state.events.filter(
       (ev) => ev.companyName?.toLowerCase() === c.name.toLowerCase() && new Date(ev.date + "T12:00:00") >= today
@@ -141,7 +157,7 @@ export default function CompanyList() {
           }`}>
             <h3 className={`font-semibold ${isArchived ? "text-gray-500" : "text-gray-900"}`}>{c.name}</h3>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {c.roles.map((r) => (
+              {c.roles.filter((r) => r.status !== "no-update" && r.status !== "saved").map((r) => (
                 <span key={r.id} className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status?.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
                   {r.title}
                 </span>
@@ -150,7 +166,7 @@ export default function CompanyList() {
             {c.whyCompany && <p className="mt-2 text-xs text-gray-400 line-clamp-2">{c.whyCompany}</p>}
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-400">
               {upcoming.length > 0 && <span className="text-green-600">{upcoming.length} upcoming</span>}
-              <span>{c.roles.length} {c.roles.length === 1 ? "role" : "roles"}</span>
+              {(() => { const visibleRoles = c.roles.filter((r) => r.status !== "no-update" && r.status !== "saved").length; return <span>{visibleRoles} {visibleRoles === 1 ? "role" : "roles"}</span>; })()}
             </div>
           </div>
         </Link>
@@ -220,7 +236,7 @@ export default function CompanyList() {
           <div className="fixed inset-0 z-30" onClick={() => setAddSearch("")} />
           <div className="absolute z-40 mt-1 left-0 right-0 rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
             {addMatches.map((company) => {
-              const roles = state.applications.filter((a) => a.company === company).map((a) => a.role);
+              const roles = state.applications.filter((a) => a.company === company && a.verdict.toLowerCase() === "in process").map((a) => a.role);
               return (
                 <button key={company} onClick={() => { quickAdd(company, roles); setAddSearch(""); }}
                   className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50">

@@ -24,6 +24,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const [deleteRoleId, setDeleteRoleId] = useState<string | null>(null);
   const [addingRole, setAddingRole] = useState(false);
   const [addRoleSearch, setAddRoleSearch] = useState("");
+  const [roleHighlight, setRoleHighlight] = useState(-1);
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,24 +98,19 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
     setDeleteRoleId(null);
   }
 
-  function addRole(title: string, status: CompanyStatus = "interviewing") {
-    // Don't add duplicate roles
-    if (company!.roles.some((r) => r.title.toLowerCase() === title.toLowerCase())) return;
-    const newRole: CompanyRole = { id: crypto.randomUUID(), title, whyRole: "", roleUrl: "", notes: "", status };
+  function addRole() {
+    const newRole: CompanyRole = { id: crypto.randomUUID(), title: "", whyRole: "", roleUrl: "", notes: "", status: "interviewing" };
     update({ roles: [...company!.roles, newRole] });
     setExpandedRoleId(newRole.id);
-    setAddingRole(false);
-    setAddRoleSearch("");
   }
 
   // Roles from applications that aren't already on this company card
   const suggestedRoles = useMemo(() => {
-    const existingTitles = new Set(company!.roles.map((r) => r.title.toLowerCase()));
-    return Array.from(new Set(
-      state.applications
-        .filter((a) => a.company.toLowerCase() === company!.name.toLowerCase())
-        .map((a) => ({ role: a.role, verdict: a.verdict }))
-    )).filter((a) => !existingTitles.has(a.role.toLowerCase()));
+    const activeTitles = new Set(company!.roles.filter((r) => r.status !== "no-update" && r.status !== "saved").map((r) => r.title.toLowerCase()));
+    return state.applications
+      .filter((a) => a.company.toLowerCase() === company!.name.toLowerCase())
+      .filter((a) => !activeTitles.has(a.role.toLowerCase()))
+      .map((a) => ({ role: a.role, verdict: a.verdict }));
   }, [state.applications, company]);
 
   const today = new Date(new Date().toDateString());
@@ -132,8 +128,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   }
 
   const COMPLETED_STATUSES: CompanyStatus[] = ["offer", "rejected-no-interview", "rejected-first-round", "rejected-complete", "no-opening", "withdrew"];
-  const HIDDEN_STATUSES: CompanyStatus[] = ["saved", "no-update"];
-  const activeRoles = company.roles.filter((r) => !COMPLETED_STATUSES.includes(r.status) && !HIDDEN_STATUSES.includes(r.status));
+  const activeRoles = company.roles.filter((r) => !COMPLETED_STATUSES.includes(r.status));
   const archivedRoles = company.roles.filter((r) => COMPLETED_STATUSES.includes(r.status));
 
   return (
@@ -233,49 +228,9 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
           );
         })}
         {/* Add role card */}
-        <div className="relative">
-          {addingRole ? (
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/30 p-5" style={{ animation: "scaleIn 0.15s ease" }}>
-              <input value={addRoleSearch} onChange={(e) => setAddRoleSearch(e.target.value)}
-                placeholder="Type a role title..."
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && addRoleSearch.trim()) {
-                    addRole(addRoleSearch.trim());
-                  }
-                  if (e.key === "Escape") { setAddingRole(false); setAddRoleSearch(""); }
-                }}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none" />
-              {(() => {
-                const q = addRoleSearch.toLowerCase();
-                const matches = suggestedRoles.filter((s) => !q || s.role.toLowerCase().includes(q));
-                if (matches.length === 0 && !addRoleSearch) return null;
-                return matches.length > 0 ? (
-                  <div className="mt-2 space-y-1">
-                    {matches.map((s) => {
-                      const verdictStatus = LABEL_TO_STATUS[s.verdict] ?? "no-update";
-                      return (
-                        <button key={s.role} onClick={() => addRole(s.role, verdictStatus)}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-sm hover:bg-white transition-colors">
-                          <span className="text-gray-700">{s.role}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(s.verdict)}`}>{s.verdict}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null;
-              })()}
-              <div className="mt-2 flex justify-end">
-                <button onClick={() => { setAddingRole(false); setAddRoleSearch(""); }}
-                  className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div onClick={() => setAddingRole(true)}
-              className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 p-5 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
-              <span className="text-sm">+ Add role</span>
-            </div>
-          )}
+        <div onClick={addRole}
+          className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 p-5 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
+          <span className="text-sm">+ Add role</span>
         </div>
       </div>
 
@@ -286,21 +241,72 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         const events = getRoleEvents(role.title);
         return (
           <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideUp 0.2s ease-out" }}>
-            {/* Role title */}
-            <div>
+            {/* Role title with suggestions */}
+            <div className="relative">
               <input key={role.id} defaultValue={role.title}
-                onFocus={(e) => e.target.dataset.originalTitle = role.title}
+                onFocus={(e) => { e.target.dataset.originalTitle = role.title; setAddRoleSearch(e.target.value); setRoleHighlight(-1); }}
+                onChange={(e) => { setAddRoleSearch(e.target.value); setRoleHighlight(-1); }}
                 onBlur={(e) => {
-                  const newTitle = e.target.value;
-                  const oldTitle = e.target.dataset.originalTitle ?? role.title;
-                  if (newTitle !== oldTitle) {
-                    updateRole(role.id, { title: newTitle });
-                    syncRoleName(oldTitle, newTitle);
-                  }
+                  // Delay to allow suggestion click
+                  setTimeout(() => {
+                    const newTitle = e.target.value;
+                    const oldTitle = e.target.dataset.originalTitle ?? role.title;
+                    if (newTitle !== oldTitle) {
+                      updateRole(role.id, { title: newTitle });
+                      syncRoleName(oldTitle, newTitle);
+                    }
+                    setAddRoleSearch("");
+                    setRoleHighlight(-1);
+                  }, 150);
                 }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                onKeyDown={(e) => {
+                  const matches = suggestedRoles.filter((s) => s.role.toLowerCase().includes(addRoleSearch.toLowerCase()));
+                  if (e.key === "ArrowDown") { e.preventDefault(); setRoleHighlight((h) => Math.min(h + 1, matches.length - 1)); }
+                  else if (e.key === "ArrowUp") { e.preventDefault(); setRoleHighlight((h) => Math.max(h - 1, 0)); }
+                  else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (roleHighlight >= 0 && roleHighlight < matches.length) {
+                      const s = matches[roleHighlight];
+                      const oldTitle = (e.target as HTMLInputElement).dataset.originalTitle ?? role.title;
+                      (e.target as HTMLInputElement).value = s.role;
+                      updateRole(role.id, { title: s.role });
+                      syncRoleName(oldTitle, s.role);
+                      setAddRoleSearch("");
+                      setRoleHighlight(-1);
+                    } else {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }
+                  else if (e.key === "Escape") { setAddRoleSearch(""); setRoleHighlight(-1); }
+                }}
                 placeholder="Role title"
                 className="text-lg font-semibold text-gray-900 bg-transparent border-none focus:outline-none p-0 w-full rounded-md hover:bg-gray-50 focus:bg-white px-1 -mx-1 transition-colors cursor-text" />
+              {addRoleSearch !== "" && (() => {
+                const matches = suggestedRoles.filter((s) => s.role.toLowerCase().includes(addRoleSearch.toLowerCase()));
+                return matches.length > 0 ? (
+                <div className="absolute z-40 mt-1 left-0 right-0 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
+                  {matches.map((s, i) => (
+                    <button key={s.role} onMouseDown={(e) => {
+                      e.preventDefault();
+                      const input = e.currentTarget.closest(".relative")?.querySelector("input") as HTMLInputElement;
+                      if (input) {
+                        const oldTitle = input.dataset.originalTitle ?? role.title;
+                        input.value = s.role;
+                        updateRole(role.id, { title: s.role });
+                        syncRoleName(oldTitle, s.role);
+                        setAddRoleSearch("");
+                        setRoleHighlight(-1);
+                      }
+                    }}
+                      onMouseEnter={() => setRoleHighlight(i)}
+                      className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${roleHighlight === i ? "bg-indigo-50" : "hover:bg-gray-50"}`}>
+                      <span className="text-gray-700">{s.role}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(s.verdict)}`}>{s.verdict}</span>
+                    </button>
+                  ))}
+                </div>
+                ) : null;
+              })()}
               <div className="flex items-center gap-1 mt-1">
                 <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -667,11 +673,22 @@ const LABEL_TO_STATUS: Record<string, CompanyStatus> = {
 
 function StatusDropdown({ status, onChange }: { status: CompanyStatus; onChange: (s: CompanyStatus) => void }) {
   const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
   const label = STATUS_TO_LABEL[status] ?? "No Update";
+
+  useEffect(() => { if (open) setHighlighted(VERDICTS.indexOf(label)); }, [open]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open) { if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, VERDICTS.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)); }
+    else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); onChange(LABEL_TO_STATUS[VERDICTS[highlighted]] ?? "no-update"); setOpen(false); }
+    else if (e.key === "Escape") { setOpen(false); }
+  }
 
   return (
     <div className="relative mt-2">
-      <button onClick={() => setOpen(!open)}
+      <button onClick={() => setOpen(!open)} onKeyDown={handleKeyDown}
         className={`flex items-center gap-1.5 rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer ${getVerdictClass(label)}`}>
         <span>{label}</span>
         <svg className="h-3 w-3 opacity-50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -680,10 +697,11 @@ function StatusDropdown({ status, onChange }: { status: CompanyStatus; onChange:
       </button>
       {open && (<>
         <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-        <div className="absolute z-40 mt-1 left-0 w-56 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
-          {VERDICTS.map((v) => (
+        <div className="absolute z-40 mt-1 left-0 w-56 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5" onKeyDown={handleKeyDown}>
+          {VERDICTS.map((v, i) => (
             <button key={v} onClick={() => { onChange(LABEL_TO_STATUS[v] ?? "no-update"); setOpen(false); }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${label === v ? "bg-gray-50" : ""}`}>
+              onMouseEnter={() => setHighlighted(i)}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${highlighted === i ? "bg-indigo-50" : label === v ? "bg-gray-50" : "hover:bg-gray-50"}`}>
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(v)}`}>{v}</span>
             </button>
           ))}
@@ -704,11 +722,24 @@ const INTERVIEW_TYPES: { value: InterviewType; label: string; cls: string }[] = 
 
 function InterviewTypeDropdown({ value, onChange }: { value: InterviewType | null; onChange: (v: InterviewType | null) => void }) {
   const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
   const current = INTERVIEW_TYPES.find((t) => t.value === value);
+  // Options: None + all types
+  const allOptions = [{ value: null as InterviewType | null, label: "None", cls: "bg-gray-100 text-gray-400" }, ...INTERVIEW_TYPES.map((t) => ({ ...t, value: t.value as InterviewType | null }))];
+
+  useEffect(() => { if (open) setHighlighted(allOptions.findIndex((o) => o.value === value)); }, [open]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open) { if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, allOptions.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)); }
+    else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); onChange(allOptions[highlighted].value); setOpen(false); }
+    else if (e.key === "Escape") { setOpen(false); }
+  }
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)}
+      <button onClick={() => setOpen(!open)} onKeyDown={handleKeyDown}
         className={`flex items-center gap-1.5 rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer ${current ? current.cls : "bg-gray-100 text-gray-400"}`}>
         <span>{current ? current.label : "Type..."}</span>
         <svg className="h-3 w-3 opacity-50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -717,15 +748,12 @@ function InterviewTypeDropdown({ value, onChange }: { value: InterviewType | nul
       </button>
       {open && (<>
         <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
-          <button onClick={() => { onChange(null); setOpen(false); }}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${!value ? "bg-gray-50" : ""}`}>
-            <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-400">None</span>
-          </button>
-          {INTERVIEW_TYPES.map((t) => (
-            <button key={t.value} onClick={() => { onChange(t.value); setOpen(false); }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === t.value ? "bg-gray-50" : ""}`}>
-              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${t.cls}`}>{t.label}</span>
+        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5" onKeyDown={handleKeyDown}>
+          {allOptions.map((opt, i) => (
+            <button key={opt.label} onClick={() => { onChange(opt.value); setOpen(false); }}
+              onMouseEnter={() => setHighlighted(i)}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${highlighted === i ? "bg-indigo-50" : value === opt.value ? "bg-gray-50" : "hover:bg-gray-50"}`}>
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${opt.cls}`}>{opt.label}</span>
             </button>
           ))}
         </div>

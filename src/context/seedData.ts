@@ -93,7 +93,6 @@ export const seedData: AppState = {
       name: "Mochi Health",
       roles: [
         { id: "r2", title: "Operations Associate - Strategy", whyRole: "", roleUrl: "https://job-boards.greenhouse.io/mochihealth/jobs/5149786008", notes: "", status: "interviewing" as const },
-        { id: "r3", title: "CoS", whyRole: "", roleUrl: "", notes: "", status: "no-update" as const },
       ],
       companyUrl: "https://joinmochi.com/",
       whyCompany: "",

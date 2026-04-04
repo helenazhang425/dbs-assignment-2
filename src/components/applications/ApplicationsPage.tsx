@@ -41,6 +41,7 @@ export default function ApplicationsPage() {
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterSearch, setFilterSearch] = useState("");
+  const [filterHighlight, setFilterHighlight] = useState(-1);
   const [sortKey, setSortKey] = useState<SortKey>("appliedDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
@@ -430,21 +431,31 @@ export default function ApplicationsPage() {
                         <div className="fixed inset-0 z-30" onClick={() => { setActiveFilter(null); setFilterSearch(""); }} />
                         <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="p-1.5">
-                            <input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} autoFocus
+                            <input value={filterSearch} onChange={(e) => { setFilterSearch(e.target.value); setFilterHighlight(-1); }} autoFocus
                               placeholder="Type and press Enter..."
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" && filterSearch.trim()) {
-                                  setColumnFilters((prev) => ({
-                                    ...prev,
-                                    [col.key]: [...(prev[col.key] ?? []), filterSearch.trim()],
-                                  }));
-                                  setFilterSearch("");
+                                if (e.key === "ArrowDown") { e.preventDefault(); setFilterHighlight((h) => Math.min(h + 1, filteredValues.length - 1)); }
+                                else if (e.key === "ArrowUp") { e.preventDefault(); setFilterHighlight((h) => Math.max(h - 1, 0)); }
+                                else if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (filterHighlight >= 0 && filterHighlight < filteredValues.length) {
+                                    const val = filteredValues[filterHighlight];
+                                    setColumnFilters((prev) => {
+                                      const current = prev[col.key] ?? [];
+                                      const isActive = current.some((v) => v.toLowerCase() === val.toLowerCase());
+                                      return { ...prev, [col.key]: isActive ? current.filter((v) => v.toLowerCase() !== val.toLowerCase()) : [...current, val] };
+                                    });
+                                  } else if (filterSearch.trim()) {
+                                    setColumnFilters((prev) => ({ ...prev, [col.key]: [...(prev[col.key] ?? []), filterSearch.trim()] }));
+                                    setFilterSearch("");
+                                  }
                                 }
+                                else if (e.key === "Escape") { setActiveFilter(null); setFilterSearch(""); }
                               }}
                               className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
                           </div>
                           <div className="max-h-48 overflow-y-auto px-1 pb-1">
-                            {filteredValues.map((val) => (
+                            {filteredValues.map((val, fi) => (
                               <button key={val} onClick={() => {
                                 setColumnFilters((prev) => {
                                   const current = prev[col.key] ?? [];
@@ -455,7 +466,8 @@ export default function ApplicationsPage() {
                                   };
                                 });
                               }}
-                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
+                                onMouseEnter={() => setFilterHighlight(fi)}
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded ${filterHighlight === fi ? "bg-indigo-50" : "hover:bg-gray-50"} ${
                                   col.key !== "verdict" && columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : col.key !== "verdict" ? "text-gray-600" : ""
                                 }`}>
                                 {columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) && (
@@ -710,15 +722,28 @@ export default function ApplicationsPage() {
                           <div className="fixed inset-0 z-30" onClick={() => { setSavedActiveFilter(null); setSavedFilterSearch(""); }} />
                           <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
                             <div className="p-1.5">
-                              <input value={savedFilterSearch} onChange={(e) => setSavedFilterSearch(e.target.value)} autoFocus
-                                placeholder="Search..." className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                              <input value={savedFilterSearch} onChange={(e) => { setSavedFilterSearch(e.target.value); setFilterHighlight(-1); }} autoFocus
+                                placeholder="Search..."
+                                onKeyDown={(e) => {
+                                  if (e.key === "ArrowDown") { e.preventDefault(); setFilterHighlight((h) => Math.min(h + 1, filteredVals.length - 1)); }
+                                  else if (e.key === "ArrowUp") { e.preventDefault(); setFilterHighlight((h) => Math.max(h - 1, 0)); }
+                                  else if (e.key === "Enter" && filterHighlight >= 0 && filterHighlight < filteredVals.length) {
+                                    e.preventDefault();
+                                    setSavedColumnFilters((prev) => ({ ...prev, [col.key]: prev[col.key] === filteredVals[filterHighlight] ? "" : filteredVals[filterHighlight] }));
+                                    setSavedActiveFilter(null); setSavedFilterSearch("");
+                                  }
+                                  else if (e.key === "Escape") { setSavedActiveFilter(null); setSavedFilterSearch(""); }
+                                }}
+                                className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
                             </div>
                             <div className="max-h-48 overflow-y-auto px-1 pb-1">
-                              {filteredVals.map((val) => (
+                              {filteredVals.map((val, fi) => (
                                 <button key={val} onClick={() => {
                                   setSavedColumnFilters((prev) => ({ ...prev, [col.key]: prev[col.key] === val ? "" : val }));
                                   setSavedActiveFilter(null); setSavedFilterSearch("");
-                                }} className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${savedColumnFilters[col.key] === val ? "text-indigo-600 font-medium" : "text-gray-600"}`}>
+                                }}
+                                  onMouseEnter={() => setFilterHighlight(fi)}
+                                  className={`block w-full px-2 py-1.5 text-left text-xs rounded ${filterHighlight === fi ? "bg-indigo-50" : "hover:bg-gray-50"} ${savedColumnFilters[col.key] === val ? "text-indigo-600 font-medium" : "text-gray-600"}`}>
                                   {val}
                                 </button>
                               ))}
@@ -959,20 +984,31 @@ export default function ApplicationsPage() {
                         <div className="fixed inset-0 z-30" onClick={() => { setArchivedActiveFilter(null); setArchivedFilterSearch(""); }} />
                         <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="p-1.5">
-                            <input value={archivedFilterSearch} onChange={(e) => setArchivedFilterSearch(e.target.value)} autoFocus
+                            <input value={archivedFilterSearch} onChange={(e) => { setArchivedFilterSearch(e.target.value); setFilterHighlight(-1); }} autoFocus
                               placeholder="Type and press Enter..."
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" && archivedFilterSearch.trim()) {
-                                  setArchivedColumnFilters((prev) => ({
-                                    ...prev, [col.key]: [...(prev[col.key] ?? []), archivedFilterSearch.trim()],
-                                  }));
-                                  setArchivedFilterSearch("");
+                                if (e.key === "ArrowDown") { e.preventDefault(); setFilterHighlight((h) => Math.min(h + 1, filteredVals.length - 1)); }
+                                else if (e.key === "ArrowUp") { e.preventDefault(); setFilterHighlight((h) => Math.max(h - 1, 0)); }
+                                else if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (filterHighlight >= 0 && filterHighlight < filteredVals.length) {
+                                    const val = filteredVals[filterHighlight];
+                                    setArchivedColumnFilters((prev) => {
+                                      const current = prev[col.key] ?? [];
+                                      const isActive = current.some((v) => v.toLowerCase() === val.toLowerCase());
+                                      return { ...prev, [col.key]: isActive ? current.filter((v) => v.toLowerCase() !== val.toLowerCase()) : [...current, val] };
+                                    });
+                                  } else if (archivedFilterSearch.trim()) {
+                                    setArchivedColumnFilters((prev) => ({ ...prev, [col.key]: [...(prev[col.key] ?? []), archivedFilterSearch.trim()] }));
+                                    setArchivedFilterSearch("");
+                                  }
                                 }
+                                else if (e.key === "Escape") { setArchivedActiveFilter(null); setArchivedFilterSearch(""); }
                               }}
                               className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
                           </div>
                           <div className="max-h-48 overflow-y-auto px-1 pb-1">
-                            {filteredVals.map((val) => (
+                            {filteredVals.map((val, fi) => (
                               <button key={val} onClick={() => {
                                 setArchivedColumnFilters((prev) => {
                                   const current = prev[col.key] ?? [];
@@ -980,7 +1016,8 @@ export default function ApplicationsPage() {
                                   return { ...prev, [col.key]: isActive ? current.filter((v) => v.toLowerCase() !== val.toLowerCase()) : [...current, val] };
                                 });
                               }}
-                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
+                                onMouseEnter={() => setFilterHighlight(fi)}
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded ${filterHighlight === fi ? "bg-indigo-50" : "hover:bg-gray-50"} ${
                                   col.key !== "verdict" && archivedColumnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : col.key !== "verdict" ? "text-gray-600" : ""
                                 }`}>
                                 {archivedColumnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) && (
@@ -1143,17 +1180,27 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
 // Notion-style verdict dropdown
 function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open && dropdownRef.current) {
-      dropdownRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (open) {
+      setHighlighted(VERDICTS.indexOf(value));
+      dropdownRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [open]);
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open) { if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, VERDICTS.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)); }
+    else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); onChange(VERDICTS[highlighted]); setOpen(false); }
+    else if (e.key === "Escape") { setOpen(false); }
+  }
+
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)}
+      <button onClick={() => setOpen(!open)} onKeyDown={handleKeyDown}
         className={`flex items-center justify-between rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left w-28 ${getVerdictClass(value)}`}>
         <span>{value}</span>
         <svg className="h-3 w-3 opacity-50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1162,10 +1209,11 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
       </button>
       {open && (<>
         <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-        <div ref={dropdownRef} className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
-          {VERDICTS.map((v) => (
+        <div ref={dropdownRef} className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5" onKeyDown={handleKeyDown}>
+          {VERDICTS.map((v, i) => (
             <button key={v} onClick={() => { onChange(v); setOpen(false); }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === v ? "bg-gray-50" : ""}`}>
+              onMouseEnter={() => setHighlighted(i)}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${highlighted === i ? "bg-indigo-50" : value === v ? "bg-gray-50" : "hover:bg-gray-50"}`}>
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(v)}`}>{v}</span>
             </button>
           ))}
