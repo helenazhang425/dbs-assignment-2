@@ -204,7 +204,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                                 ev.interviewType === "case" ? "bg-purple-50 text-purple-600" :
                                 "bg-gray-100 text-gray-500"
                               }`}>{
-                                ev.interviewType === "recruiter-screen" ? "Recruiter" :
+                                ev.interviewType === "recruiter-screen" ? "Recruiter Screen" :
                                 ev.interviewType === "behavioral" ? "Behavioral" :
                                 ev.interviewType === "case" ? "Case" :
                                 ev.interviewType
