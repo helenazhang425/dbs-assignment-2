@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import Button from "@/components/ui/Button";
@@ -902,18 +902,26 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
 // Notion-style verdict dropdown
 function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && dropdownRef.current) {
+      dropdownRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [open]);
+
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)}
-        className={`inline-flex items-center rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left w-28 ${getVerdictClass(value)}`}>
-        {value}
-        <svg className="ml-1 h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        className={`flex items-center justify-between rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left w-28 ${getVerdictClass(value)}`}>
+        <span>{value}</span>
+        <svg className="h-3 w-3 opacity-50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {open && (<>
         <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
+        <div ref={dropdownRef} className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
           {VERDICTS.map((v) => (
             <button key={v} onClick={() => { onChange(v); setOpen(false); }}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === v ? "bg-gray-50" : ""}`}>
