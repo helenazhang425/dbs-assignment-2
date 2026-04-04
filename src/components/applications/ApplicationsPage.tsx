@@ -51,6 +51,8 @@ export default function ApplicationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [selectedSavedIds, setSelectedSavedIds] = useState<Set<string>>(new Set());
+  const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(new Set());
   const [editingSavedCell, setEditingSavedCell] = useState<{ id: string; field: string } | null>(null);
   const [editSavedValue, setEditSavedValue] = useState("");
 
@@ -588,9 +590,34 @@ export default function ApplicationsPage() {
           )}
           <p className="mb-2 text-xs text-gray-400">{filteredSaved.length} positions</p>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          {/* Bulk actions for To Apply */}
+          {selectedSavedIds.size > 0 && (
+            <div className="mb-3 flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+              <span className="text-sm text-indigo-700">{selectedSavedIds.size} selected</span>
+              <button onClick={() => {
+                selectedSavedIds.forEach((id) => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id } }));
+                setSelectedSavedIds(new Set());
+              }} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Mark Applied</button>
+              <button onClick={() => {
+                selectedSavedIds.forEach((id) => dispatch({ type: "DELETE_SAVED_POSITION", payload: { id } }));
+                setSelectedSavedIds(new Set());
+              }} className="text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
+              <button onClick={() => setSelectedSavedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
+            </div>
+          )}
+
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="w-10 px-3 py-3">
+                    <input type="checkbox"
+                      checked={selectedSavedIds.size === filteredSaved.length && filteredSaved.length > 0}
+                      onChange={() => {
+                        if (selectedSavedIds.size === filteredSaved.length) setSelectedSavedIds(new Set());
+                        else setSelectedSavedIds(new Set(filteredSaved.map((p) => p.id)));
+                      }}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  </th>
                   {savedColumns.map((col) => (
                     <th key={col.key} className={`${col.width} select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 relative`}>
                       <div className="flex items-center gap-1">
@@ -694,7 +721,16 @@ export default function ApplicationsPage() {
                   };
                   const savedKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") saveSavedEdit(); if (e.key === "Escape") setEditingSavedCell(null); };
                   return (
-                  <tr key={pos.id} className="group hover:bg-gray-50">
+                  <tr key={pos.id} className={`group hover:bg-gray-50 ${selectedSavedIds.has(pos.id) ? "bg-indigo-50/50" : ""}`}>
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" checked={selectedSavedIds.has(pos.id)}
+                        onChange={() => setSelectedSavedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(pos.id)) next.delete(pos.id); else next.add(pos.id);
+                          return next;
+                        })}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    </td>
                     <td className="px-4 py-2.5">
                       {isEditing("company") ? (
                         <input value={editSavedValue} onChange={(e) => setEditSavedValue(e.target.value)} onBlur={saveSavedEdit} onKeyDown={savedKeyDown} autoFocus
@@ -765,10 +801,35 @@ export default function ApplicationsPage() {
         </>);
       })()}
       {tab === "archived" && (
+        <>
+        {/* Bulk actions for Archived */}
+        {selectedArchivedIds.size > 0 && (
+          <div className="mb-3 flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+            <span className="text-sm text-indigo-700">{selectedArchivedIds.size} selected</span>
+            <button onClick={() => {
+              selectedArchivedIds.forEach((id) => dispatch({ type: "UNARCHIVE_APPLICATION", payload: { id } }));
+              setSelectedArchivedIds(new Set());
+            }} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Restore</button>
+            <button onClick={() => {
+              selectedArchivedIds.forEach((id) => dispatch({ type: "DELETE_APPLICATION", payload: { id } }));
+              setSelectedArchivedIds(new Set());
+            }} className="text-xs font-medium text-red-500 hover:text-red-700">Delete permanently</button>
+            <button onClick={() => setSelectedArchivedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
+          </div>
+        )}
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="w-10 px-3 py-3">
+                  <input type="checkbox"
+                    checked={selectedArchivedIds.size === archivedApps.length && archivedApps.length > 0}
+                    onChange={() => {
+                      if (selectedArchivedIds.size === archivedApps.length) setSelectedArchivedIds(new Set());
+                      else setSelectedArchivedIds(new Set(archivedApps.map((a) => a.id)));
+                    }}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-28">Applied</th>
@@ -778,7 +839,16 @@ export default function ApplicationsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {archivedApps.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50 opacity-60">
+                <tr key={app.id} className={`hover:bg-gray-50 opacity-60 ${selectedArchivedIds.has(app.id) ? "!opacity-100 bg-indigo-50/50" : ""}`}>
+                  <td className="px-3 py-2.5">
+                    <input type="checkbox" checked={selectedArchivedIds.has(app.id)}
+                      onChange={() => setSelectedArchivedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(app.id)) next.delete(app.id); else next.add(app.id);
+                        return next;
+                      })}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  </td>
                   <td className="px-4 py-2.5 text-sm text-gray-900">{app.company}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-600">{app.role}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500">
@@ -799,6 +869,7 @@ export default function ApplicationsPage() {
             <div className="py-12 text-center text-sm text-gray-400">No archived applications.</div>
           )}
         </div>
+        </>
       )}
 
       {/* Delete confirmation */}
