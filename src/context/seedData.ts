@@ -81,7 +81,7 @@ export const seedData: AppState = {
       id: "c1",
       name: "Tandem",
       roles: [
-        { id: "r1", title: "S&O Lead", whyRole: "", roleUrl: "https://jobs.ashbyhq.com/tandem/970f8b3c-c1b1-4c1d-9984-f78f3c5d2dd2", status: "interviewing" as const },
+        { id: "r1", title: "S&O Lead", whyRole: "", roleUrl: "https://jobs.ashbyhq.com/tandem/970f8b3c-c1b1-4c1d-9984-f78f3c5d2dd2", notes: "", status: "interviewing" as const },
       ],
       companyUrl: "https://withtandem.com/",
       whyCompany: "",
@@ -92,8 +92,8 @@ export const seedData: AppState = {
       id: "c2",
       name: "Mochi Health",
       roles: [
-        { id: "r2", title: "Operations Associate - Strategy", whyRole: "", roleUrl: "https://job-boards.greenhouse.io/mochihealth/jobs/5149786008", status: "interviewing" as const },
-        { id: "r3", title: "CoS", whyRole: "", roleUrl: "", status: "no-update" as const },
+        { id: "r2", title: "Operations Associate - Strategy", whyRole: "", roleUrl: "https://job-boards.greenhouse.io/mochihealth/jobs/5149786008", notes: "", status: "interviewing" as const },
+        { id: "r3", title: "CoS", whyRole: "", roleUrl: "", notes: "", status: "no-update" as const },
       ],
       companyUrl: "https://joinmochi.com/",
       whyCompany: "",

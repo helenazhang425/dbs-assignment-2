@@ -26,6 +26,7 @@ export interface CompanyRole {
   title: string;
   whyRole: string;
   roleUrl: string;
+  notes: string;
   status: CompanyStatus;
 }
 

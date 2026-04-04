@@ -22,9 +22,15 @@ const COMPLETED_STATUSES: CompanyStatus[] = [
   "offer", "rejected-no-interview", "rejected-first-round", "rejected-complete", "no-opening", "withdrew",
 ];
 
+const NON_ACTIVE_STATUSES: CompanyStatus[] = [
+  ...COMPLETED_STATUSES, "saved", "no-update",
+];
+
 function isCompanyArchived(roles: { status: CompanyStatus }[]): boolean {
   if (roles.length === 0) return false;
-  return roles.every((r) => COMPLETED_STATUSES.includes(r.status));
+  // Archive if no roles are actively interviewing
+  return roles.every((r) => NON_ACTIVE_STATUSES.includes(r.status))
+    && roles.some((r) => COMPLETED_STATUSES.includes(r.status));
 }
 
 export default function CompanyList() {
@@ -95,6 +101,7 @@ export default function CompanyList() {
           title: r,
           whyRole: "",
           roleUrl: "",
+          notes: "",
           status: "interviewing" as const,
         })),
         companyUrl: "",
@@ -129,7 +136,7 @@ export default function CompanyList() {
         <Link href={`/companies/${c.id}`}>
           <div className={`h-full rounded-xl border p-5 transition-all cursor-pointer ${
             isArchived
-              ? "border-gray-100 bg-gray-50/50 hover:shadow-sm"
+              ? "border-gray-200 bg-gray-50 hover:shadow-sm"
               : "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
           }`}>
             <h3 className={`font-semibold ${isArchived ? "text-gray-500" : "text-gray-900"}`}>{c.name}</h3>
@@ -241,7 +248,7 @@ export default function CompanyList() {
             Archived ({archivedCompanies.length})
           </button>
           {showArchived && (
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 space-y-3" style={{ animation: "slideUp 0.2s ease" }}>
               <input type="text" value={archivedSearch} onChange={(e) => setArchivedSearch(e.target.value)}
                 placeholder="Search archived companies..."
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />

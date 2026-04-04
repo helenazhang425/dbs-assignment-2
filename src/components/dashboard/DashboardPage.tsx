@@ -833,7 +833,7 @@ export default function DashboardPage() {
                 }
 
                 return (
-                  <div key={ev.id} ref={editFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3">
+                  <div key={ev.id} ref={editFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3" style={{ animation: "scaleIn 0.15s ease" }}>
                     {/* Title (auto-generated: role + company) */}
                     <input defaultValue={ev.title}
                       onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { title: e.target.value } } })}
