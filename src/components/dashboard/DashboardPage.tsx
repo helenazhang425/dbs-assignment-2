@@ -420,9 +420,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main two-column layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: General Checklist */}
-        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Checklist</h2>
           </div>
@@ -445,7 +445,7 @@ export default function DashboardPage() {
             }
 
             const renderItem = (item: typeof generalChecklist[0]) => (
-              <div key={item.id} className="group/prep flex items-center gap-3 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <div key={item.id} className="group/prep flex items-center gap-2 rounded-lg py-1.5 hover:bg-gray-50">
                 <input type="checkbox" checked={item.completed}
                   onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: item.id } })}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -706,7 +706,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right: Schedule */}
-        <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
@@ -1026,7 +1026,7 @@ export default function DashboardPage() {
                 {(() => {
                   const filteredEvents = scheduleFilter === "all"
                     ? upcomingEvents
-                    : upcomingEvents.filter((ev) => ev.category === scheduleFilter);
+                    : upcomingEvents.filter((ev) => ev.category === scheduleFilter || ev.id === editingEventId);
                   return filteredEvents.length === 0 ? (
                     <p className="py-8 text-center text-sm text-gray-400">
                       {upcomingEvents.length === 0 ? "No upcoming events" : "No events match this filter"}
