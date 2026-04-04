@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+import { InterviewType } from "@/types";
 import Button from "@/components/ui/Button";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -22,6 +23,11 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const [editingQ, setEditingQ] = useState<{ eventId: string; type: "asked" | "toAsk"; index: number } | null>(null);
   const [editQValue, setEditQValue] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showAddInterview, setShowAddInterview] = useState(false);
+  const [newEvDate, setNewEvDate] = useState("");
+  const [newEvStart, setNewEvStart] = useState("");
+  const [newEvEnd, setNewEvEnd] = useState("");
+  const [newEvType, setNewEvType] = useState("");
 
   if (!company) {
     return (
@@ -47,7 +53,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   // Get all events for this company (past and future)
   const companyEvents = state.events
     .filter((ev) => ev.companyName?.toLowerCase() === company.name.toLowerCase())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const today = new Date(new Date().toDateString());
 
@@ -152,7 +158,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Why this role?</label>
             <textarea value={company.whyRole} onChange={(e) => update({ whyRole: e.target.value })}
-              rows={3} placeholder="Why is this role a fit for you?"
+              rows={3} placeholder="Why is this role a good fit for you?"
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
           </div>
 
@@ -365,34 +371,60 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     )}
                     <p className="mt-1 text-xs text-gray-400">Auto-detected from schedule</p>
                   </div>
+                ) : !showAddInterview ? (
+                  <button onClick={() => setShowAddInterview(true)}
+                    className="w-full rounded-lg border border-dashed border-gray-300 px-3 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
+                    + Add next interview
+                  </button>
                 ) : (
-                  <div>
-                    <input type="date" value={company.interviewDate}
-                      onChange={(e) => {
-                        update({ interviewDate: e.target.value });
-                        if (e.target.value) {
-                          dispatch({
-                            type: "ADD_EVENT",
-                            payload: {
-                              title: `${company.name} — ${company.role}`,
-                              date: e.target.value,
-                              startTime: "",
-                              endTime: "",
-                              category: "interview",
-                              interviewType: null,
-                              interviewStage: null,
-                              companyId: company.id,
-                              companyName: company.name,
-                              role: company.role,
-                              questionsAsked: [],
-                              questionsToAsk: [],
-                              notes: "",
-                            },
-                          });
-                        }
+                  <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="date" value={newEvDate} onChange={(e) => setNewEvDate(e.target.value)}
+                        className="rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
+                      <input type="time" value={newEvStart} onChange={(e) => setNewEvStart(e.target.value)} placeholder="Start"
+                        className="rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
+                      <input type="time" value={newEvEnd} onChange={(e) => setNewEvEnd(e.target.value)} placeholder="End"
+                        className="rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none" />
+                    </div>
+                    <select value={newEvType} onChange={(e) => setNewEvType(e.target.value)}
+                      className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:border-indigo-400 focus:outline-none">
+                      <option value="">Interview type...</option>
+                      <option value="recruiter-screen">Recruiter Screen</option>
+                      <option value="behavioral">Behavioral</option>
+                      <option value="case">Case</option>
+                      <option value="presentation">Presentation</option>
+                      <option value="mixed">Mixed</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <div className="flex gap-2 pt-1">
+                      <button disabled={!newEvDate} onClick={() => {
+                        dispatch({
+                          type: "ADD_EVENT",
+                          payload: {
+                            title: `${company.name} — ${company.role}`,
+                            date: newEvDate,
+                            startTime: newEvStart,
+                            endTime: newEvEnd,
+                            category: "interview",
+                            interviewType: (newEvType || null) as InterviewType | null,
+                            interviewStage: null,
+                            companyId: company.id,
+                            companyName: company.name,
+                            role: company.role,
+                            questionsAsked: [],
+                            questionsToAsk: [],
+                            notes: "",
+                          },
+                        });
+                        setNewEvDate(""); setNewEvStart(""); setNewEvEnd(""); setNewEvType("");
+                        setShowAddInterview(false);
                       }}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                    <p className="mt-1 text-xs text-gray-400">Set a date to create an event on the schedule</p>
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                        Add to schedule
+                      </button>
+                      <button onClick={() => { setShowAddInterview(false); setNewEvDate(""); setNewEvStart(""); setNewEvEnd(""); setNewEvType(""); }}
+                        className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                    </div>
                   </div>
                 )}
               </div>

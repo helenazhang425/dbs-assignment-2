@@ -189,7 +189,7 @@ export const seedData: AppState = {
       companyId: null,
       companyName: "Mochi Health",
       role: "Operations Associate - Strategy",
-      questionsAsked: [],
+      questionsAsked: ["TMAY", "Why do you want to work at a startup?", "1 pictoral logic question", "6-sided fair die rolled 20x, 4 green 2 red, what is most common sequence? (one sequence had 1 fewer outcome than the rest)"],
       questionsToAsk: [],
       notes: "",
       createdAt: Date.now(),
