@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useApp } from "@/context/AppContext";
@@ -61,6 +61,12 @@ export default function DashboardPage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const editFormRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (editingEventId && editFormRef.current) {
+      editFormRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [editingEventId]);
   const [companySearch, setCompanySearch] = useState("");
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -414,10 +420,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Main two-column layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Left: General Checklist */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Checklist</h2>
           </div>
 
@@ -439,7 +445,7 @@ export default function DashboardPage() {
             }
 
             const renderItem = (item: typeof generalChecklist[0]) => (
-              <div key={item.id} className="group/prep flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
+              <div key={item.id} className="group/prep flex items-center gap-3 rounded-lg px-1 py-2 hover:bg-gray-50">
                 <input type="checkbox" checked={item.completed}
                   onChange={() => dispatch({ type: "TOGGLE_CHECKLIST_ITEM", payload: { id: item.id } })}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -486,7 +492,7 @@ export default function DashboardPage() {
 
             return (
               <div className="space-y-1">
-                <div className="px-3 pb-1">
+                <div className="pb-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">General Prep</p>
                 </div>
                 <DragDropContext onDragEnd={handleDragEnd}>
@@ -546,7 +552,7 @@ export default function DashboardPage() {
                   </form>
                 </div>
                 {/* Company Prep — intentional sections */}
-                <div className="px-3 pt-3">
+                <div className="pt-3">
                   <div className="border-t border-gray-200 mt-2" />
                   <div className="flex items-center justify-between pt-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company Prep</p>
@@ -626,7 +632,7 @@ export default function DashboardPage() {
                       .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
                     return (
                       <div key={sectionId} className="group/section">
-                        <div className="flex items-center px-3 pt-2">
+                        <div className="flex items-center pt-2">
                           <p className="flex-1 text-xs text-gray-400">{ev?.title ?? sectionTitle}</p>
                           {ev?.date && (
                             <span className={`text-xs ${new Date(ev.date + "T12:00:00") < today ? "text-red-500" : "text-gray-400"}`}>
@@ -700,7 +706,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right: Schedule */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
@@ -827,7 +833,7 @@ export default function DashboardPage() {
                 }
 
                 return (
-                  <div key={ev.id} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3">
+                  <div key={ev.id} ref={editFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-3 space-y-3">
                     {/* Title (auto-generated: role + company) */}
                     <input defaultValue={ev.title}
                       onBlur={(e) => dispatch({ type: "UPDATE_EVENT", payload: { id: ev.id, updates: { title: e.target.value } } })}
@@ -1178,6 +1184,7 @@ export default function DashboardPage() {
                   const isSelected = selectedDate === dateStr;
                   const hasInterview = dayEvents.some((ev) => ev.category === "interview");
                   const hasPractice = dayEvents.some((ev) => ev.category === "practice");
+                  const hasNetworking = dayEvents.some((ev) => ev.category === "networking");
                   return (
                     <div
                       key={day}
@@ -1197,6 +1204,7 @@ export default function DashboardPage() {
                         <div className="mt-1 flex justify-center gap-1">
                           {hasInterview && <span className="h-1.5 w-4 rounded-full bg-indigo-400" />}
                           {hasPractice && <span className="h-1.5 w-4 rounded-full bg-green-400" />}
+                          {hasNetworking && <span className="h-1.5 w-4 rounded-full bg-amber-400" />}
                         </div>
                       )}
                     </div>
@@ -1414,7 +1422,11 @@ function SelectedDatePanel({
               <div key={ev.id} onClick={() => onEditEvent?.(ev.id)}
                 className={`rounded-lg bg-white p-3 border border-gray-100 ${onEditEvent ? "cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/20 transition-colors" : ""}`}>
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${ev.category === "interview" ? "bg-indigo-500" : "bg-green-500"}`} />
+                  <span className={`h-2 w-2 rounded-full ${
+                    ev.category === "interview" ? "bg-indigo-500" :
+                    ev.category === "networking" ? "bg-amber-500" :
+                    ev.category === "practice" ? "bg-green-500" : "bg-gray-400"
+                  }`} />
                   <span className="text-sm font-medium text-gray-900">{ev.title}</span>
                   {(() => {
                     const iType = (ev as unknown as { interviewType?: string }).interviewType;
