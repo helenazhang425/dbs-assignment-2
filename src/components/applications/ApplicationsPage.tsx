@@ -27,7 +27,7 @@ const VERDICTS = [
   "No Update",
   "In Process",
   "Rejected - No Interview",
-  "Rejected - interviewed",
+  "Rejected - Interviewed",
   "No Opening",
   "Withdrew",
   "Offer",
