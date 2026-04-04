@@ -414,9 +414,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main two-column layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: General Checklist */}
-        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Checklist</h2>
           </div>
@@ -700,7 +700,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right: Schedule */}
-        <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
