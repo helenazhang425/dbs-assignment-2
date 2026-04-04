@@ -84,8 +84,26 @@ export default function ApplicationsPage() {
     return Array.from(set).sort();
   }, [state.applications]);
 
-  const activeApps = useMemo(() => state.applications.filter((a) => !a.archived), [state.applications]);
-  const archivedApps = useMemo(() => state.applications.filter((a) => a.archived), [state.applications]);
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const activeApps = useMemo(() => state.applications.filter((a) => {
+    if (a.archived) return false;
+    // Auto-archive after 6 months
+    if (a.appliedDate && a.appliedDate.length >= 10) {
+      const appDate = new Date(a.appliedDate + "T12:00:00");
+      if (appDate < sixMonthsAgo) return false;
+    }
+    return true;
+  }), [state.applications]);
+  const archivedApps = useMemo(() => state.applications.filter((a) => {
+    if (a.archived) return true;
+    // Auto-archived (older than 6 months)
+    if (a.appliedDate && a.appliedDate.length >= 10) {
+      const appDate = new Date(a.appliedDate + "T12:00:00");
+      if (appDate < sixMonthsAgo) return true;
+    }
+    return false;
+  }), [state.applications]);
 
   const filtered = useMemo(() => {
     let result = activeApps;
@@ -299,9 +317,10 @@ export default function ApplicationsPage() {
               className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
-          {/* Active filters display */}
+          {/* Active filters display — always reserve space */}
+          <div className="min-h-[28px] mb-1">
           {Object.entries(columnFilters).filter(([, v]) => v && v.length > 0).length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-400">Filters:</span>
               {Object.entries(columnFilters).flatMap(([key, values]) =>
                 (values ?? []).map((value) => (
@@ -319,10 +338,12 @@ export default function ApplicationsPage() {
               <button onClick={() => setColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
             </div>
           )}
+          </div>
 
-          {/* Bulk actions */}
+          {/* Bulk actions — always reserve space */}
+          <div className="min-h-[36px] mb-1">
           {selectedIds.size > 0 && (
-            <div className="mb-3 flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
               <span className="text-sm text-indigo-700">{selectedIds.size} selected</span>
               <select value={bulkVerdict} onChange={(e) => setBulkVerdict(e.target.value)}
                 className="rounded border border-indigo-200 px-2 py-1 text-xs focus:outline-none">
@@ -342,6 +363,7 @@ export default function ApplicationsPage() {
               </button>
             </div>
           )}
+          </div>
 
           <p className="mb-2 text-xs text-gray-400">{displayedApps.length} of {filtered.length} shown</p>
 
@@ -591,8 +613,9 @@ export default function ApplicationsPage() {
           <p className="mb-2 text-xs text-gray-400">{filteredSaved.length} positions</p>
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           {/* Bulk actions for To Apply */}
+          <div className="min-h-[36px] mb-1">
           {selectedSavedIds.size > 0 && (
-            <div className="mb-3 flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+            <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
               <span className="text-sm text-indigo-700">{selectedSavedIds.size} selected</span>
               <button onClick={() => {
                 selectedSavedIds.forEach((id) => dispatch({ type: "CONVERT_TO_APPLICATION", payload: { id } }));
@@ -605,6 +628,7 @@ export default function ApplicationsPage() {
               <button onClick={() => setSelectedSavedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
             </div>
           )}
+          </div>
 
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
@@ -803,8 +827,9 @@ export default function ApplicationsPage() {
       {tab === "archived" && (
         <>
         {/* Bulk actions for Archived */}
+        <div className="min-h-[36px] mb-1">
         {selectedArchivedIds.size > 0 && (
-          <div className="mb-3 flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
+          <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-4 py-2">
             <span className="text-sm text-indigo-700">{selectedArchivedIds.size} selected</span>
             <button onClick={() => {
               selectedArchivedIds.forEach((id) => dispatch({ type: "UNARCHIVE_APPLICATION", payload: { id } }));
@@ -817,6 +842,7 @@ export default function ApplicationsPage() {
             <button onClick={() => setSelectedArchivedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
           </div>
         )}
+        </div>
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
