@@ -401,11 +401,16 @@ export default function ApplicationsPage() {
                                   };
                                 });
                               }}
-                                className={`block w-full px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
-                                  col.key === "verdict" ? getVerdictClass(val) : columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : "text-gray-600"
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
+                                  col.key !== "verdict" && columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : col.key !== "verdict" ? "text-gray-600" : ""
                                 }`}>
+                                {columnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) && (
+                                  <svg className="h-3 w-3 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                                 {col.key === "verdict" ? (
-                                  <span className={`inline-flex rounded-full px-2 py-0.5 ${getVerdictClass(val)}`}>{val}</span>
+                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(val)}`}>{val}</span>
                                 ) : val}
                               </button>
                             ))}
@@ -924,14 +929,8 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
         <div ref={dropdownRef} className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg p-1.5">
           {VERDICTS.map((v) => (
             <button key={v} onClick={() => { onChange(v); setOpen(false); }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50">
-              {value === v && (
-                <svg className="h-3 w-3 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-              {value !== v && <span className="w-3" />}
-              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(v)}`}>{v}</span>
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-gray-50 ${value === v ? "bg-gray-50" : ""}`}>
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getVerdictClass(v)}`}>{v}</span>
             </button>
           ))}
         </div>
