@@ -53,6 +53,10 @@ export default function ApplicationsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedSavedIds, setSelectedSavedIds] = useState<Set<string>>(new Set());
   const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(new Set());
+  const [archivedSearch, setArchivedSearch] = useState("");
+  const [archivedColumnFilters, setArchivedColumnFilters] = useState<Record<string, string[]>>({});
+  const [archivedActiveFilter, setArchivedActiveFilter] = useState<string | null>(null);
+  const [archivedFilterSearch, setArchivedFilterSearch] = useState("");
   const [editingSavedCell, setEditingSavedCell] = useState<{ id: string; field: string } | null>(null);
   const [editSavedValue, setEditSavedValue] = useState("");
 
@@ -162,6 +166,23 @@ export default function ApplicationsPage() {
     }
     return result;
   }, [state.savedPositions, savedSearch, savedColumnFilters, savedSortKey, savedSortDir]);
+
+  const filteredArchived = useMemo(() => {
+    let result = archivedApps;
+    if (archivedSearch) {
+      const q = archivedSearch.toLowerCase();
+      result = result.filter((a) => a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q));
+    }
+    Object.entries(archivedColumnFilters).forEach(([key, values]) => {
+      if (values && values.length > 0) {
+        result = result.filter((a) => {
+          const cellValue = (a as unknown as Record<string, string>)[key]?.toLowerCase() ?? "";
+          return values.some((v) => cellValue.includes(v.toLowerCase()));
+        });
+      }
+    });
+    return result;
+  }, [archivedApps, archivedSearch, archivedColumnFilters]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -824,8 +845,44 @@ export default function ApplicationsPage() {
           </div>
         </>);
       })()}
-      {tab === "archived" && (
+      {tab === "archived" && (() => {
+        const archColumns = [
+          { key: "company", label: "Company", width: "w-40" },
+          { key: "role", label: "Role", width: "w-52" },
+          { key: "appliedDate", label: "Applied", width: "w-28" },
+          { key: "verdict", label: "Verdict", width: "w-44" },
+        ];
+        return (
         <>
+        {/* Search */}
+        <div className="mb-4 flex gap-3">
+          <input type="text" value={archivedSearch} onChange={(e) => setArchivedSearch(e.target.value)}
+            placeholder="Search archived..."
+            className="flex-1 min-w-48 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+        </div>
+        {/* Active filters */}
+        <div className="min-h-[28px] mb-1">
+        {Object.entries(archivedColumnFilters).filter(([, v]) => v && v.length > 0).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-400">Filters:</span>
+            {Object.entries(archivedColumnFilters).flatMap(([key, values]) =>
+              (values ?? []).map((value) => (
+                <button key={`${key}-${value}`} onClick={() => setArchivedColumnFilters((prev) => ({
+                  ...prev, [key]: (prev[key] ?? []).filter((v) => v !== value),
+                }))}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${key === "verdict" ? getVerdictClass(value) : "bg-gray-100 text-gray-600"}`}>
+                  {value}
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ))
+            )}
+            <button onClick={() => setArchivedColumnFilters({})} className="text-xs text-gray-400 hover:text-gray-600">Clear all</button>
+          </div>
+        )}
+        </div>
+        <p className="mb-2 text-xs text-gray-400">{filteredArchived.length} archived</p>
         {/* Bulk actions for Archived */}
         <div className="min-h-[36px] mb-1">
         {selectedArchivedIds.size > 0 && (
@@ -849,22 +906,78 @@ export default function ApplicationsPage() {
               <tr>
                 <th className="w-10 px-3 py-3">
                   <input type="checkbox"
-                    checked={selectedArchivedIds.size === archivedApps.length && archivedApps.length > 0}
+                    checked={selectedArchivedIds.size === filteredArchived.length && filteredArchived.length > 0}
                     onChange={() => {
-                      if (selectedArchivedIds.size === archivedApps.length) setSelectedArchivedIds(new Set());
-                      else setSelectedArchivedIds(new Set(archivedApps.map((a) => a.id)));
+                      if (selectedArchivedIds.size === filteredArchived.length) setSelectedArchivedIds(new Set());
+                      else setSelectedArchivedIds(new Set(filteredArchived.map((a) => a.id)));
                     }}
                     className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-28">Applied</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-44">Verdict</th>
+                {archColumns.map((col) => (
+                  <th key={col.key} className={`${col.width} select-none px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 relative`}>
+                    <div className="flex items-center gap-1">
+                      <span>{col.label}</span>
+                      <button onClick={() => setArchivedActiveFilter(archivedActiveFilter === col.key ? null : col.key)}
+                        className={`ml-auto p-0.5 rounded hover:bg-gray-200 ${archivedColumnFilters[col.key]?.length ? "text-indigo-500" : "text-gray-300 hover:text-gray-500"}`}>
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                      </button>
+                    </div>
+                    {archivedActiveFilter === col.key && (() => {
+                      const allVals = Array.from(new Set(archivedApps.map((a) => (a as unknown as Record<string, string>)[col.key]).filter(Boolean)))
+                        .sort(col.key === "appliedDate" ? (a, b) => b.localeCompare(a) : undefined);
+                      const fq = archivedFilterSearch.toLowerCase();
+                      const filteredVals = fq ? allVals.filter((v) => v.toLowerCase().includes(fq)) : allVals;
+                      return (<>
+                        <div className="fixed inset-0 z-30" onClick={() => { setArchivedActiveFilter(null); setArchivedFilterSearch(""); }} />
+                        <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
+                          <div className="p-1.5">
+                            <input value={archivedFilterSearch} onChange={(e) => setArchivedFilterSearch(e.target.value)} autoFocus
+                              placeholder="Type and press Enter..."
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && archivedFilterSearch.trim()) {
+                                  setArchivedColumnFilters((prev) => ({
+                                    ...prev, [col.key]: [...(prev[col.key] ?? []), archivedFilterSearch.trim()],
+                                  }));
+                                  setArchivedFilterSearch("");
+                                }
+                              }}
+                              className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto px-1 pb-1">
+                            {filteredVals.map((val) => (
+                              <button key={val} onClick={() => {
+                                setArchivedColumnFilters((prev) => {
+                                  const current = prev[col.key] ?? [];
+                                  const isActive = current.some((v) => v.toLowerCase() === val.toLowerCase());
+                                  return { ...prev, [col.key]: isActive ? current.filter((v) => v.toLowerCase() !== val.toLowerCase()) : [...current, val] };
+                                });
+                              }}
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs rounded hover:bg-gray-50 ${
+                                  col.key !== "verdict" && archivedColumnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) ? "text-indigo-600 font-medium" : col.key !== "verdict" ? "text-gray-600" : ""
+                                }`}>
+                                {archivedColumnFilters[col.key]?.some((v) => v.toLowerCase() === val.toLowerCase()) && (
+                                  <svg className="h-3 w-3 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {col.key === "verdict" ? (
+                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(val)}`}>{val}</span>
+                                ) : val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>);
+                    })()}
+                  </th>
+                ))}
                 <th className="w-24" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {archivedApps.map((app) => (
+              {filteredArchived.map((app) => (
                 <tr key={app.id} className={`hover:bg-gray-50 opacity-60 ${selectedArchivedIds.has(app.id) ? "!opacity-100 bg-indigo-50/50" : ""}`}>
                   <td className="px-3 py-2.5">
                     <input type="checkbox" checked={selectedArchivedIds.has(app.id)}
@@ -891,12 +1004,12 @@ export default function ApplicationsPage() {
               ))}
             </tbody>
           </table>
-          {archivedApps.length === 0 && (
-            <div className="py-12 text-center text-sm text-gray-400">No archived applications.</div>
+          {filteredArchived.length === 0 && (
+            <div className="py-12 text-center text-sm text-gray-400">{archivedApps.length === 0 ? "No archived applications." : "No archived apps match your search."}</div>
           )}
         </div>
-        </>
-      )}
+        </>);
+      })()}
 
       {/* Delete confirmation */}
       {deleteConfirmId && (
