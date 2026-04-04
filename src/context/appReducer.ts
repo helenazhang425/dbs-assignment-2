@@ -2,7 +2,7 @@ import { AppState, Question, Company, ChecklistItem, Story, PrepEvent, Applicati
 
 export type AppAction =
   // Questions
-  | { type: "ADD_QUESTION"; payload: Omit<Question, "id" | "createdAt" | "practiceCount" | "confidence"> }
+  | { type: "ADD_QUESTION"; payload: Omit<Question, "id" | "createdAt" | "practiceCount"> }
   | { type: "UPDATE_QUESTION"; payload: { id: string; updates: Partial<Question> } }
   | { type: "INCREMENT_PRACTICE"; payload: { id: string } }
   | { type: "DELETE_QUESTION"; payload: { id: string } }
@@ -56,7 +56,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             ...action.payload,
             id: crypto.randomUUID(),
             practiceCount: 0,
-            confidence: null,
             createdAt: Date.now(),
           },
         ],
