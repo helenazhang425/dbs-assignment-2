@@ -168,23 +168,27 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
             <h3 className="mb-4 text-sm font-medium text-gray-700">Interview Timeline</h3>
             {companyEvents.length === 0 ? (
               <p className="text-sm text-gray-400">No interviews scheduled. Add events on the Dashboard.</p>
-            ) : (
+            ) : (() => {
+                const hasMultipleRoles = new Set(companyEvents.map((ev) => ev.role)).size > 1;
+                return (
               <div className="flex gap-6">
                 {/* Compact timeline */}
-                <div className="relative pl-6 flex-shrink-0" style={{ minWidth: "260px" }}>
+                <div className="relative pl-6 flex-shrink-0" style={{ minWidth: "280px" }}>
                   <div className="absolute left-2.5 top-0 bottom-0 w-px bg-gray-200" />
                   {companyEvents.map((ev) => {
                     const isPast = new Date(ev.date + "T12:00:00") < today;
                     const isSelected = selectedEventId === ev.id;
                     return (
-                      <div key={ev.id} className="relative pb-4 last:pb-0">
-                        <div className={`absolute -left-3.5 top-2 h-3 w-3 rounded-full border-2 ${
+                      <div key={ev.id} className="relative pb-4 last:pb-0 flex items-center">
+                        {/* Dot — vertically centered */}
+                        <div className={`absolute -left-3.5 h-3 w-3 rounded-full border-2 ${
                           isSelected ? "border-indigo-500 bg-indigo-500" :
                           isPast ? "border-gray-400 bg-gray-400" :
                           "border-indigo-300 bg-white"
                         }`} />
-                        <button onClick={() => setSelectedEventId(isSelected ? null : ev.id)}
-                          className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
+                        <div
+                          onMouseEnter={() => setSelectedEventId(ev.id)}
+                          className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all cursor-pointer ${
                             isSelected ? "border-indigo-300 bg-indigo-50" :
                             isPast ? "border-gray-100 bg-gray-50 hover:border-gray-200" :
                             "border-gray-200 bg-white hover:border-indigo-200"
@@ -212,7 +216,10 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                               {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ""}
                             </p>
                           )}
-                        </button>
+                          {hasMultipleRoles && ev.role && (
+                            <p className="mt-0.5 text-xs text-indigo-400 truncate">{ev.role}</p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -321,8 +328,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     </div>
                   );
                 })()}
-              </div>
-            )}
+              </div>);
+              })()}
           </div>
         </div>
 
