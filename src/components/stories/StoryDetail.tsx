@@ -75,8 +75,8 @@ export default function StoryDetail({
 
   const starSections = [
     { key: "situation", label: "Situation", value: story.situation },
-    { key: "task", label: "Task", value: story.task },
     { key: "action", label: "Action", value: story.action },
+    { key: "task", label: "Task", value: story.task },
     { key: "result", label: "Result", value: story.result },
   ];
 
@@ -144,6 +144,27 @@ export default function StoryDetail({
             )}
           </div>
         ))}
+      </div>
+
+      {/* Learning — full width */}
+      <div className="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">L</span>
+          <h3 className="text-sm font-semibold text-gray-700">Learning</h3>
+        </div>
+        {editingField === "learning" ? (
+          <textarea defaultValue={story.learning} autoFocus rows={3}
+            onBlur={(e) => updateField("learning", e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
+            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
+        ) : (
+          <div onClick={() => setEditingField("learning")}
+            className="cursor-text rounded-lg px-3 py-2 -mx-3 -my-1 hover:bg-gray-50 min-h-[3rem]">
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+              {story.learning || <span className="italic text-gray-300">Click to write...</span>}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Linked Questions */}

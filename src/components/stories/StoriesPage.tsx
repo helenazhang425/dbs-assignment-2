@@ -38,6 +38,7 @@ export default function StoriesPage() {
   const [formTask, setFormTask] = useState("");
   const [formAction, setFormAction] = useState("");
   const [formResult, setFormResult] = useState("");
+  const [formLearning, setFormLearning] = useState("");
   const [formTags, setFormTags] = useState("");
 
   const selectedStory = state.stories.find((s) => s.id === selectedId);
@@ -60,6 +61,7 @@ export default function StoriesPage() {
         s.task.toLowerCase().includes(q) ||
         s.action.toLowerCase().includes(q) ||
         s.result.toLowerCase().includes(q) ||
+        s.learning.toLowerCase().includes(q) ||
         s.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
@@ -80,6 +82,7 @@ export default function StoriesPage() {
         task: formTask.trim(),
         action: formAction.trim(),
         result: formResult.trim(),
+        learning: formLearning.trim(),
         tags: formTags.split(",").map((t) => t.trim()).filter(Boolean),
       },
     });
@@ -89,7 +92,7 @@ export default function StoriesPage() {
 
   function resetForm() {
     setFormTitle(""); setFormSituation(""); setFormTask("");
-    setFormAction(""); setFormResult(""); setFormTags("");
+    setFormAction(""); setFormResult(""); setFormLearning(""); setFormTags("");
   }
 
   if (selectedStory) {
@@ -143,10 +146,26 @@ export default function StoriesPage() {
         {filtered.map((story) => {
           const unresolvedFeedback = story.feedback.filter((f) => !f.resolved).length;
           const linkedQCount = state.questions.filter((q) => q.storyId === story.id).length;
+          const missingSections = [
+            !story.situation && "S",
+            !story.task && "T",
+            !story.action && "A",
+            !story.result && "R",
+          ].filter(Boolean);
+          const isIncomplete = missingSections.length > 0 || unresolvedFeedback > 0;
           return (
             <div key={story.id} onClick={() => setSelectedId(story.id)}
-              className="cursor-pointer rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
-              <h3 className="font-semibold text-gray-900">{story.title}</h3>
+              className={`cursor-pointer rounded-xl border bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${
+                isIncomplete ? "border-amber-200" : "border-gray-200"
+              }`}>
+              <div className="flex items-start justify-between">
+                <h3 className="font-semibold text-gray-900">{story.title}</h3>
+                {isIncomplete && (
+                  <span className="flex-shrink-0 ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                    {missingSections.length > 0 ? `Missing ${missingSections.join("")}` : "Feedback"}
+                  </span>
+                )}
+              </div>
               {/* Brief summary bullets */}
               <ul className="mt-2 space-y-0.5 text-xs text-gray-500">
                 {story.situation && <li className="truncate">· {story.situation.split("\n")[0]}</li>}
@@ -161,8 +180,7 @@ export default function StoriesPage() {
               )}
               <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
                 {linkedQCount > 0 && <span className="text-indigo-500">{linkedQCount} linked {linkedQCount === 1 ? "question" : "questions"}</span>}
-                <span>{story.feedback.length} feedback</span>
-                {unresolvedFeedback > 0 && <span className="text-amber-500">{unresolvedFeedback} unresolved</span>}
+                {unresolvedFeedback > 0 ? <span className="text-amber-500">{unresolvedFeedback} unresolved feedback</span> : <span>{story.feedback.length} feedback</span>}
               </div>
             </div>
           );
@@ -207,6 +225,12 @@ export default function StoriesPage() {
             <textarea value={formResult} onChange={(e) => setFormResult(e.target.value)} rows={2}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               placeholder="What was the outcome?" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Learning</label>
+            <textarea value={formLearning} onChange={(e) => setFormLearning(e.target.value)} rows={2}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="What did you learn?" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Tags (comma-separated)</label>

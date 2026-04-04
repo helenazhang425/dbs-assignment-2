@@ -67,6 +67,7 @@ export interface Story {
   task: string;
   action: string;
   result: string;
+  learning: string;
   tags: string[];
   feedback: FeedbackEntry[];
   createdAt: number;
