@@ -187,7 +187,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           "border-indigo-300 bg-white"
                         }`} />
                         <div
-                          onMouseEnter={() => setSelectedEventId(ev.id)}
+                          onClick={() => setSelectedEventId(selectedEventId === ev.id ? null : ev.id)}
                           className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all cursor-pointer ${
                             isSelected ? "border-indigo-300 bg-indigo-50" :
                             isPast ? "border-gray-100 bg-gray-50 hover:border-gray-200" :
@@ -231,7 +231,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                   if (!ev) return null;
                   const evTasks = state.checklist.filter((t) => t.eventId === ev.id);
                   return (
-                    <div className="flex-1 rounded-lg border border-indigo-100 bg-indigo-50/20 p-5">
+                    <div className="flex-1 rounded-lg border border-indigo-100 bg-indigo-50/20 p-5 animate-in slide-in-from-left-4 duration-200" style={{ animation: "slideIn 0.2s ease-out" }}>
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <p className="text-sm font-medium text-gray-900">{ev.title}</p>
@@ -276,7 +276,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                                 className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
                             ) : (
                               <span onClick={() => { setEditingQ({ eventId: ev.id, type: "toAsk", index: qi }); setEditQValue(q); }}
-                                className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                                className="flex-1 text-xs text-gray-600 cursor-pointer">• {q}</span>
                             )}
                             <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_TO_ASK", payload: { eventId: ev.id, index: qi } })}
                               className="invisible group-hover:visible text-gray-300 hover:text-red-500">
@@ -306,7 +306,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                                 className="flex-1 rounded border border-indigo-300 px-1 py-0.5 text-xs focus:outline-none" />
                             ) : (
                               <span onClick={() => { setEditingQ({ eventId: ev.id, type: "asked", index: qi }); setEditQValue(q); }}
-                                className="flex-1 text-xs text-gray-600 cursor-pointer">{q}</span>
+                                className="flex-1 text-xs text-gray-600 cursor-pointer">• {q}</span>
                             )}
                             <button onClick={() => dispatch({ type: "REMOVE_EVENT_QUESTION_ASKED", payload: { eventId: ev.id, index: qi } })}
                               className="invisible group-hover:visible text-gray-300 hover:text-red-500">
