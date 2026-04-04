@@ -780,7 +780,7 @@ export default function ApplicationsPage() {
                     {app.appliedDate?.length === 4 ? app.appliedDate : app.appliedDate ? new Date(app.appliedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—"}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(app.verdict)}`}>{app.verdict}</span>
+                    <span className={`inline-flex rounded-2xl px-2.5 py-0.5 text-xs font-medium w-28 ${getVerdictClass(app.verdict)}`}>{app.verdict}</span>
                   </td>
                   <td className="px-4 py-2.5">
                     <button onClick={() => dispatch({ type: "UNARCHIVE_APPLICATION", payload: { id: app.id } })}
@@ -905,7 +905,7 @@ function VerdictDropdown({ value, onChange }: { value: string; onChange: (v: str
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)}
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left ${getVerdictClass(value)}`}>
+        className={`inline-flex items-center rounded-2xl px-2.5 py-0.5 text-xs font-medium cursor-pointer text-left w-28 ${getVerdictClass(value)}`}>
         {value}
         <svg className="ml-1 h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
