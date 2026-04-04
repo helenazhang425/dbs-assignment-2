@@ -139,41 +139,48 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         <button onClick={addRole} className="text-sm text-indigo-500 hover:text-indigo-700">+ Add role</button>
       </div>
 
-      {/* Role grid cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Role grid cards — square */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {activeRoles.map((role) => {
           const events = getRoleEvents(role.title);
           const nextEv = events.find((ev) => new Date(ev.date + "T12:00:00") >= today);
           const isSelected = expandedRoleId === role.id;
 
           return (
-            <div key={role.id}
-              onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
-              className={`rounded-xl border p-5 cursor-pointer transition-all ${
-                isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
-                "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
-              }`}>
-              <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-gray-900">{role.title || "Untitled Role"}</h3>
-                <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700">In Process</span>
+            <div key={role.id} className="group/card relative">
+              <div
+                onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
+                className={`aspect-square rounded-xl border p-4 cursor-pointer transition-all flex flex-col justify-between ${
+                  isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
+                  "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
+                }`}>
+                <div>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700">In Process</span>
+                  <h3 className="mt-2 font-semibold text-gray-900 text-sm">{role.title || "Untitled Role"}</h3>
+                </div>
+                <div className="text-xs text-gray-400 space-y-1">
+                  {nextEv && (
+                    <p className="text-indigo-500">
+                      Next: {new Date(nextEv.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {nextEv.interviewType ? ` · ${nextEv.interviewType === "recruiter-screen" ? "Recruiter Screen" : nextEv.interviewType}` : ""}
+                    </p>
+                  )}
+                  <p>{events.length} {events.length === 1 ? "round" : "rounds"}</p>
+                </div>
               </div>
-              {nextEv && (
-                <p className="mt-1 text-xs text-indigo-500">
-                  Next: {new Date(nextEv.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  {nextEv.startTime ? ` at ${nextEv.startTime}` : ""}
-                  {nextEv.interviewType ? ` · ${nextEv.interviewType === "recruiter-screen" ? "Recruiter Screen" : nextEv.interviewType}` : ""}
-                </p>
-              )}
-              <div className="mt-2 flex gap-3 text-xs text-gray-400">
-                <span>{events.length} {events.length === 1 ? "round" : "rounds"}</span>
-                {role.roleUrl && <span>Job posting ↗</span>}
-              </div>
+              {/* Delete button */}
+              <button onClick={(e) => { e.stopPropagation(); deleteRole(role.id); }}
+                className="absolute top-2 right-2 invisible group-hover/card:visible rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           );
         })}
         {/* Add role card */}
         <div onClick={addRole}
-          className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 p-5 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
+          className="aspect-square flex items-center justify-center rounded-xl border border-dashed border-gray-300 cursor-pointer text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors">
           <span className="text-sm">+ Add role</span>
         </div>
       </div>
