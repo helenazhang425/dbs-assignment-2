@@ -31,19 +31,23 @@ export default function StoriesPage() {
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const selectedStory = state.stories.find((s) => s.id === selectedId);
 
-  // All unique tags
+  const activeStories = useMemo(() => state.stories.filter((s) => !s.archived), [state.stories]);
+  const archivedStories = useMemo(() => state.stories.filter((s) => s.archived), [state.stories]);
+
+  // All unique tags from active stories
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    state.stories.forEach((s) => s.tags.forEach((t) => tags.add(t)));
+    activeStories.forEach((s) => s.tags.forEach((t) => tags.add(t)));
     return Array.from(tags).sort();
-  }, [state.stories]);
+  }, [activeStories]);
 
-  // Filtered stories
+  // Filtered active stories
   const filtered = useMemo(() => {
-    let result = state.stories;
+    let result = activeStories;
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((s) =>
@@ -111,7 +115,8 @@ export default function StoriesPage() {
           <h1 className="text-2xl font-bold text-gray-900">STAR Stories</h1>
           <p className="mt-1 text-sm text-gray-500">
             {filtered.length} {filtered.length === 1 ? "story" : "stories"}
-            {activeTag && <span> tagged &ldquo;{activeTag}&rdquo;</span>}
+            {archivedStories.length > 0 && <span> · {archivedStories.length} archived</span>}
+            {activeTag && <span> · tagged &ldquo;{activeTag}&rdquo;</span>}
           </p>
         </div>
         <Button onClick={handleAdd}>Add Story</Button>
@@ -155,12 +160,18 @@ export default function StoriesPage() {
             <div key={story.id} className={`relative group cursor-pointer rounded-xl border bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${
                 isIncomplete ? "border-amber-200" : "border-gray-200"
               }`} onClick={() => setSelectedId(story.id)}>
-              <button onClick={(e) => { e.stopPropagation(); setDeleteId(story.id); }}
-                className="absolute top-3 right-3 invisible group-hover:visible rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50">
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="absolute top-3 right-3 invisible group-hover:visible flex gap-1">
+                <button onClick={(e) => { e.stopPropagation(); dispatch({ type: "UPDATE_STORY", payload: { id: story.id, updates: { archived: true } } }); }}
+                  className="rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50 shadow-sm">
+                  Archive
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setDeleteId(story.id); }}
+                  className="rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
               <div className="flex items-start justify-between">
                 <h3 className="font-semibold text-gray-900">{story.title}</h3>
                 {isIncomplete && (
@@ -190,11 +201,56 @@ export default function StoriesPage() {
         })}
       </div>
 
-      {filtered.length === 0 && state.stories.length > 0 && (
+      {filtered.length === 0 && activeStories.length > 0 && (
         <div className="py-12 text-center text-sm text-gray-400">No stories match your search.</div>
       )}
-      {state.stories.length === 0 && (
+      {activeStories.length === 0 && archivedStories.length === 0 && (
         <div className="py-12 text-center text-sm text-gray-400">No stories yet. Add your first STAR story to get started.</div>
+      )}
+
+      {archivedStories.length > 0 && (
+        <div className="mt-8">
+          <button onClick={() => setShowArchived(!showArchived)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600">
+            <svg className={`h-3.5 w-3.5 transition-transform ${showArchived ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Archived ({archivedStories.length})
+          </button>
+          {showArchived && (
+            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2" style={{ animation: "slideUp 0.2s ease" }}>
+              {archivedStories.map((story) => (
+                <div key={story.id} className="relative group cursor-pointer rounded-xl border border-gray-200 bg-gray-50 p-5 hover:shadow-sm"
+                  onClick={() => setSelectedId(story.id)}>
+                  <div className="absolute top-3 right-3 invisible group-hover:visible flex gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); dispatch({ type: "UPDATE_STORY", payload: { id: story.id, updates: { archived: false } } }); }}
+                      className="rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs text-indigo-600 hover:bg-indigo-50 shadow-sm">
+                      Restore
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteId(story.id); }}
+                      className="rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <h3 className="font-semibold text-gray-500">{story.title}</h3>
+                  <ul className="mt-2 space-y-0.5 text-xs text-gray-400">
+                    {story.situation && <li className="truncate">· {story.situation.split("\n")[0]}</li>}
+                    {story.result && <li className="truncate">· {story.result.split("\n")[0]}</li>}
+                  </ul>
+                  {story.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {story.tags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete story?">

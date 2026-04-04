@@ -18,7 +18,7 @@ export type AppAction =
   | { type: "DELETE_CHECKLIST_ITEM"; payload: { id: string } }
   | { type: "CLEAR_COMPLETED" }
   // Stories
-  | { type: "ADD_STORY"; payload: Omit<Story, "id" | "createdAt" | "updatedAt" | "feedback"> }
+  | { type: "ADD_STORY"; payload: Omit<Story, "id" | "createdAt" | "updatedAt" | "feedback" | "archived"> }
   | { type: "UPDATE_STORY"; payload: { id: string; updates: Partial<Omit<Story, "feedback">> } }
   | { type: "DELETE_STORY"; payload: { id: string } }
   | { type: "ADD_FEEDBACK"; payload: { storyId: string; text: string } }
@@ -185,6 +185,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             ...action.payload,
             id: crypto.randomUUID(),
             feedback: [],
+            archived: false,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           },

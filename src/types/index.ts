@@ -70,6 +70,7 @@ export interface Story {
   learning: string;
   tags: string[];
   feedback: FeedbackEntry[];
+  archived: boolean;
   createdAt: number;
   updatedAt: number;
 }
