@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import Button from "@/components/ui/Button";
 
@@ -34,7 +35,8 @@ const VERDICTS = [
 
 export default function ApplicationsPage() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<Tab>("applied");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => searchParams.get("tab") === "saved" ? "saved" : "applied");
   const [search, setSearch] = useState("");
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -726,6 +728,7 @@ export default function ApplicationsPage() {
 function ApplicationDonut({ applications }: { applications: { verdict: string }[] }) {
   const [hovered, setHovered] = useState<{ label: string; count: number; pct: number; color: string } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [hoveringDonut, setHoveringDonut] = useState(false);
 
   const total = applications.length;
   const segments = [
@@ -745,7 +748,8 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
   return (
     <div className="mb-6 flex items-center gap-6">
       <div className="relative flex-shrink-0" style={{ width: size, height: size }}
-        onMouseLeave={() => setHovered(null)}>
+        onMouseEnter={() => setHoveringDonut(true)}
+        onMouseLeave={() => { setHovered(null); setHoveringDonut(false); }}>
         <svg width={size} height={size} className="-rotate-90">
           <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
           {segments.map((s) => {
@@ -793,7 +797,7 @@ function ApplicationDonut({ applications }: { applications: { verdict: string }[
         </div>
       </div>
       {/* Tooltip on mouse */}
-      {hovered && (
+      {hovered && hoveringDonut && (
         <div className="fixed z-50 pointer-events-none rounded-lg bg-gray-900 text-white px-3 py-1.5 text-xs shadow-lg"
           style={{ left: mousePos.x + 12, top: mousePos.y - 10 }}>
           <span className="font-medium">{hovered.label}</span> · {hovered.count} ({hovered.pct}%)

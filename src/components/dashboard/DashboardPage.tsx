@@ -402,7 +402,7 @@ export default function DashboardPage() {
         </Link>
 
         {/* To Apply */}
-        <Link href="/applications">
+        <Link href="/applications?tab=saved">
           <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400">To Apply</p>
             <p className="mt-3 text-2xl font-bold text-indigo-600">{state.savedPositions.length}</p>
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                     className="flex-1 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
                 ) : (
                   <span
-                    onClick={() => setEditingChecklistId(item.id)}
+                    onClick={(e) => { e.stopPropagation(); setEditingChecklistId(item.id); }}
                     className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${item.completed ? "text-gray-400 line-through opacity-60" : "text-gray-700"}`}
                   >
                     {item.text}
@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
                                       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingChecklistId(null); }}
                                       className="flex-1 rounded border border-indigo-300 px-1.5 py-0.5 text-sm focus:outline-none" />
                                   ) : (
-                                    <span onClick={() => setEditingChecklistId(task.id)}
+                                    <span onClick={(e) => { e.stopPropagation(); setEditingChecklistId(task.id); }}
                                       className={`flex-1 text-sm cursor-pointer select-none transition-all duration-200 ${task.completed ? "text-gray-400 line-through opacity-60" : "text-gray-600"}`}>
                                       {task.text}
                                     </span>
