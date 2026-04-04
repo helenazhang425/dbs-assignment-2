@@ -2,9 +2,9 @@ import { AppState, Question, Company, ChecklistItem, Story, PrepEvent, Applicati
 
 export type AppAction =
   // Questions
-  | { type: "ADD_QUESTION"; payload: Omit<Question, "id" | "createdAt" | "practiced"> }
+  | { type: "ADD_QUESTION"; payload: Omit<Question, "id" | "createdAt" | "practiceCount" | "confidence"> }
   | { type: "UPDATE_QUESTION"; payload: { id: string; updates: Partial<Question> } }
-  | { type: "TOGGLE_PRACTICED"; payload: { id: string } }
+  | { type: "INCREMENT_PRACTICE"; payload: { id: string } }
   | { type: "DELETE_QUESTION"; payload: { id: string } }
   // Companies
   | { type: "ADD_COMPANY"; payload: Omit<Company, "id" | "createdAt"> }
@@ -55,7 +55,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           {
             ...action.payload,
             id: crypto.randomUUID(),
-            practiced: false,
+            practiceCount: 0,
+            confidence: null,
             createdAt: Date.now(),
           },
         ],
@@ -67,11 +68,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           q.id === action.payload.id ? { ...q, ...action.payload.updates } : q
         ),
       };
-    case "TOGGLE_PRACTICED":
+    case "INCREMENT_PRACTICE":
       return {
         ...state,
         questions: state.questions.map((q) =>
-          q.id === action.payload.id ? { ...q, practiced: !q.practiced } : q
+          q.id === action.payload.id ? { ...q, practiceCount: q.practiceCount + 1 } : q
         ),
       };
     case "DELETE_QUESTION":

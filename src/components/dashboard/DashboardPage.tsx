@@ -92,7 +92,7 @@ export default function DashboardPage() {
   const generalDone = generalChecklist.filter((i) => i.completed).length;
   const generalTotal = generalChecklist.length;
 
-  const questionsPracticed = state.questions.filter((q) => q.practiced).length;
+  const questionsPracticed = state.questions.filter((q) => q.practiceCount > 0).length;
   const questionsTotal = state.questions.length;
   const storiesCount = state.stories.length;
   const unresolvedFeedback = state.stories.reduce(
@@ -129,7 +129,7 @@ export default function DashboardPage() {
   const practiceThisWeek = eventsThisWeek.filter((ev) => ev.category === "practice").length;
 
   // Last practiced
-  const practicedQuestions = state.questions.filter((q) => q.practiced);
+  const practicedQuestions = state.questions.filter((q) => q.practiceCount > 0);
   const lastPracticedDate = practicedQuestions.length > 0
     ? Math.max(...practicedQuestions.map((q) => q.createdAt))
     : null;

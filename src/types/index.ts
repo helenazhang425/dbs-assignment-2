@@ -1,10 +1,13 @@
 export type QuestionCategory = "behavioral" | "product-case" | "role-specific";
 
+export type Confidence = "low" | "medium" | "high" | null;
+
 export interface Question {
   id: string;
   text: string;
   category: QuestionCategory;
-  practiced: boolean;
+  practiceCount: number;
+  confidence: Confidence;
   storyIds: string[];
   notes: string;
   createdAt: number;
