@@ -36,6 +36,8 @@ export type AppAction =
   | { type: "ADD_APPLICATION"; payload: Omit<Application, "id" | "createdAt"> }
   | { type: "UPDATE_APPLICATION"; payload: { id: string; updates: Partial<Application> } }
   | { type: "DELETE_APPLICATION"; payload: { id: string } }
+  | { type: "ARCHIVE_APPLICATION"; payload: { id: string } }
+  | { type: "UNARCHIVE_APPLICATION"; payload: { id: string } }
   // Saved Positions
   | { type: "ADD_SAVED_POSITION"; payload: Omit<SavedPosition, "id" | "createdAt"> }
   | { type: "UPDATE_SAVED_POSITION"; payload: { id: string; updates: Partial<SavedPosition> } }
@@ -354,6 +356,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         applications: state.applications.filter((a) => a.id !== action.payload.id),
       };
+    case "ARCHIVE_APPLICATION":
+      return {
+        ...state,
+        applications: state.applications.map((a) =>
+          a.id === action.payload.id ? { ...a, archived: true } : a
+        ),
+      };
+    case "UNARCHIVE_APPLICATION":
+      return {
+        ...state,
+        applications: state.applications.map((a) =>
+          a.id === action.payload.id ? { ...a, archived: false } : a
+        ),
+      };
 
     // Saved Positions
     case "ADD_SAVED_POSITION":
@@ -394,6 +410,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             verdict: "No Update",
             notes: pos.notes,
             spokeTo: "",
+            archived: false,
             createdAt: Date.now(),
           },
         ],

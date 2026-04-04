@@ -105,6 +105,7 @@ export interface Application {
   verdict: string;
   notes: string;
   spokeTo: string;
+  archived: boolean;
   createdAt: number;
 }
 

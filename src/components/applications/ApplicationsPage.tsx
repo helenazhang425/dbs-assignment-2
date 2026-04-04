@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import Button from "@/components/ui/Button";
 
-type Tab = "applied" | "saved";
+type Tab = "applied" | "saved" | "archived";
 type SortKey = "company" | "role" | "appliedDate" | "method" | "location" | "verdict";
 type SortDir = "asc" | "desc" | "none";
 
@@ -46,6 +46,8 @@ export default function ApplicationsPage() {
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [visibleCount, setVisibleCount] = useState(15);
+  const [visibleHistory, setVisibleHistory] = useState<number[]>([]);
+  const [dateFilter, setDateFilter] = useState<{ year?: string; month?: string }>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkVerdict, setBulkVerdict] = useState("No Update");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -80,11 +82,21 @@ export default function ApplicationsPage() {
     return Array.from(set).sort();
   }, [state.applications]);
 
+  const activeApps = useMemo(() => state.applications.filter((a) => !a.archived), [state.applications]);
+  const archivedApps = useMemo(() => state.applications.filter((a) => a.archived), [state.applications]);
+
   const filtered = useMemo(() => {
-    let result = state.applications;
+    let result = activeApps;
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((a) => a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q));
+    }
+    // Date filter
+    if (dateFilter.year) {
+      result = result.filter((a) => a.appliedDate?.startsWith(dateFilter.year!));
+    }
+    if (dateFilter.month) {
+      result = result.filter((a) => a.appliedDate?.slice(0, 7) === `${dateFilter.year}-${dateFilter.month}`);
     }
     // Apply column filters
     Object.entries(columnFilters).forEach(([key, value]) => {
@@ -101,7 +113,7 @@ export default function ApplicationsPage() {
       });
     }
     return result;
-  }, [state.applications, search, columnFilters, sortKey, sortDir]);
+  }, [activeApps, search, dateFilter, columnFilters, sortKey, sortDir]);
 
   const displayedApps = filtered.slice(0, visibleCount);
   const hasMore = filtered.length > visibleCount;
@@ -160,7 +172,7 @@ export default function ApplicationsPage() {
     if (!newCompany.trim()) return;
     dispatch({
       type: "ADD_APPLICATION",
-      payload: { company: newCompany.trim(), role: newRole.trim(), appliedDate: newDate, method: newMethod, location: newLocation.trim(), verdict: newVerdict, notes: "", spokeTo: "" },
+      payload: { company: newCompany.trim(), role: newRole.trim(), appliedDate: newDate, method: newMethod, location: newLocation.trim(), verdict: newVerdict, notes: "", spokeTo: "", archived: false },
     });
     setNewCompany(""); setNewRole(""); setNewDate(""); setNewMethod("Company website"); setNewLocation(""); setNewVerdict("No Update");
   }
@@ -234,14 +246,14 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {state.applications.length} applied · {state.savedPositions.length} saved
+            {activeApps.length} applied · {state.savedPositions.length} saved{archivedApps.length > 0 ? ` · ${archivedApps.length} archived` : ""}
           </p>
         </div>
         <Button variant="secondary" onClick={handleExport}>Export CSV</Button>
       </div>
 
       {/* Summary donut */}
-      <ApplicationDonut applications={state.applications} />
+      <ApplicationDonut applications={activeApps} />
 
       {/* Tabs */}
       <div className="mb-4 flex gap-1 border-b border-gray-200">
@@ -261,6 +273,15 @@ export default function ApplicationsPage() {
         >
           To Apply ({state.savedPositions.length})
         </button>
+        {archivedApps.length > 0 && (
+          <button
+            onClick={() => setTab("archived")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === "archived" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Archived ({archivedApps.length})
+          </button>
+        )}
       </div>
 
       {tab === "applied" && (
@@ -300,6 +321,12 @@ export default function ApplicationsPage() {
               </select>
               <button onClick={applyBulkVerdict} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
                 Apply verdict
+              </button>
+              <button onClick={() => {
+                selectedIds.forEach((id) => dispatch({ type: "ARCHIVE_APPLICATION", payload: { id } }));
+                setSelectedIds(new Set());
+              }} className="text-xs font-medium text-red-500 hover:text-red-700">
+                Archive
               </button>
               <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">
                 Clear
@@ -483,13 +510,20 @@ export default function ApplicationsPage() {
           </div>
 
           {hasMore && (
-            <button onClick={() => setVisibleCount((c) => c + 15)}
+            <button onClick={() => {
+              setVisibleHistory((h) => [...h, visibleCount]);
+              setVisibleCount((c) => c + 15);
+            }}
               className="mt-3 w-full rounded-lg border border-gray-200 bg-white py-2.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
               Show more ({filtered.length - visibleCount} remaining)
             </button>
           )}
-          {visibleCount > 15 && (
-            <button onClick={() => setVisibleCount(15)}
+          {visibleHistory.length > 0 && (
+            <button onClick={() => {
+              const prev = visibleHistory[visibleHistory.length - 1];
+              setVisibleHistory((h) => h.slice(0, -1));
+              setVisibleCount(prev);
+            }}
               className="mt-2 w-full text-center text-xs text-gray-400 hover:text-gray-600">
               Show less
             </button>
@@ -704,6 +738,43 @@ export default function ApplicationsPage() {
           </div>
         </>);
       })()}
+      {tab === "archived" && (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-40">Company</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-52">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-28">Applied</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 w-44">Verdict</th>
+                <th className="w-24" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {archivedApps.map((app) => (
+                <tr key={app.id} className="hover:bg-gray-50 opacity-60">
+                  <td className="px-4 py-2.5 text-sm text-gray-900">{app.company}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-600">{app.role}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500">
+                    {app.appliedDate?.length === 4 ? app.appliedDate : app.appliedDate ? new Date(app.appliedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—"}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getVerdictClass(app.verdict)}`}>{app.verdict}</span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <button onClick={() => dispatch({ type: "UNARCHIVE_APPLICATION", payload: { id: app.id } })}
+                      className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Restore</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {archivedApps.length === 0 && (
+            <div className="py-12 text-center text-sm text-gray-400">No archived applications.</div>
+          )}
+        </div>
+      )}
+
       {/* Delete confirmation */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
