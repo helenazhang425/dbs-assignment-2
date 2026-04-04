@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
-import Badge from "@/components/ui/Badge";
 
 const STATUS_COLORS: Record<string, string> = {
   "in process": "bg-amber-100 text-amber-700",
@@ -25,11 +24,11 @@ export default function CompanyList() {
       .filter((a) => !companyNames.has(a.company.toLowerCase()));
   }, [state.applications, state.companies]);
 
-  // Unique companies from in-process for suggestions
   const suggestions = useMemo(() => {
-    const map = new Map<string, { company: string; role: string }>();
+    const map = new Map<string, { company: string; roles: string[] }>();
     inProcessApps.forEach((a) => {
-      if (!map.has(a.company)) map.set(a.company, { company: a.company, role: a.role });
+      if (!map.has(a.company)) map.set(a.company, { company: a.company, roles: [] });
+      map.get(a.company)!.roles.push(a.role);
     });
     return Array.from(map.values());
   }, [inProcessApps]);
@@ -37,10 +36,11 @@ export default function CompanyList() {
   const filtered = useMemo(() => {
     if (!search) return state.companies;
     const q = search.toLowerCase();
-    return state.companies.filter((c) => c.name.toLowerCase().includes(q) || c.role.toLowerCase().includes(q));
+    return state.companies.filter((c) =>
+      c.name.toLowerCase().includes(q) || c.roles.some((r) => r.title.toLowerCase().includes(q))
+    );
   }, [state.companies, search]);
 
-  // Add search matches from applications
   const addMatches = useMemo(() => {
     if (!addSearch) return [];
     const q = addSearch.toLowerCase();
@@ -50,50 +50,32 @@ export default function CompanyList() {
       .slice(0, 6);
   }, [addSearch, state.applications, state.companies]);
 
-  function quickAdd(company: string, role: string) {
+  function quickAdd(company: string, roles: string[]) {
     dispatch({
       type: "ADD_COMPANY",
       payload: {
         name: company,
-        role: role,
-        status: "interviewing",
-        interviewDate: "",
-        roleUrl: "",
+        roles: roles.map((r) => ({
+          id: crypto.randomUUID(),
+          title: r,
+          whyRole: "",
+          roleUrl: "",
+          status: "interviewing" as const,
+        })),
         companyUrl: "",
         whyCompany: "",
-        whyRole: "",
         notes: "",
-        questionsAsked: [],
-        questionsToAsk: [],
       },
     });
-  }
-
-  function getAppStatus(companyName: string, role: string) {
-    const app = state.applications.find((a) =>
-      a.company.toLowerCase() === companyName.toLowerCase() &&
-      (!role || a.role.toLowerCase() === role.toLowerCase())
-    ) ?? state.applications.find((a) => a.company.toLowerCase() === companyName.toLowerCase());
-    return app?.verdict ?? null;
-  }
-
-  function getUpcomingEvents(companyName: string) {
-    const today = new Date(new Date().toDateString());
-    return state.events.filter(
-      (ev) => ev.companyName?.toLowerCase() === companyName.toLowerCase() && new Date(ev.date + "T12:00:00") >= today
-    );
   }
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Deep research on companies you&apos;re interviewing with
-        </p>
+        <p className="mt-1 text-sm text-gray-500">Deep research on companies you&apos;re interviewing with</p>
       </div>
 
-      {/* Auto-suggest for In Process apps */}
       {suggestions.length > 0 && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-medium text-amber-800">
@@ -101,50 +83,42 @@ export default function CompanyList() {
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.map((s) => (
-              <button key={s.company} onClick={() => quickAdd(s.company, s.role)}
+              <button key={s.company} onClick={() => quickAdd(s.company, s.roles)}
                 className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors">
-                + {s.company}
+                + {s.company} ({s.roles.length} {s.roles.length === 1 ? "role" : "roles"})
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Search */}
       <div className="mb-4">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search companies..."
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
       </div>
 
-      {/* Company cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((c) => {
-          const appStatus = getAppStatus(c.name, c.role);
-          const upcoming = getUpcomingEvents(c.name);
+          const today = new Date(new Date().toDateString());
+          const upcoming = state.events.filter(
+            (ev) => ev.companyName?.toLowerCase() === c.name.toLowerCase() && new Date(ev.date + "T12:00:00") >= today
+          );
           return (
             <Link key={c.id} href={`/companies/${c.id}`}>
               <div className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-gray-900">{c.name}</h3>
-                  {appStatus && (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[appStatus.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
-                      {appStatus}
+                <h3 className="font-semibold text-gray-900">{c.name}</h3>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {c.roles.map((r) => (
+                    <span key={r.id} className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status?.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+                      {r.title}
                     </span>
-                  )}
+                  ))}
                 </div>
-                {c.role && <p className="mt-1 text-sm text-gray-500">{c.role}</p>}
                 {c.whyCompany && <p className="mt-2 text-xs text-gray-400 line-clamp-2">{c.whyCompany}</p>}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-400">
-                  {c.interviewDate && (
-                    <span className="text-indigo-500">
-                      Interview: {new Date(c.interviewDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
-                  )}
-                  {upcoming.length > 0 && (
-                    <span className="text-green-600">{upcoming.length} upcoming</span>
-                  )}
-                  {c.questionsToAsk.length > 0 && <span>{c.questionsToAsk.length} Qs to ask</span>}
+                  {upcoming.length > 0 && <span className="text-green-600">{upcoming.length} upcoming</span>}
+                  <span>{c.roles.length} {c.roles.length === 1 ? "role" : "roles"}</span>
                 </div>
               </div>
             </Link>
@@ -156,7 +130,6 @@ export default function CompanyList() {
         <div className="py-12 text-center text-sm text-gray-400">No companies match your search.</div>
       )}
 
-      {/* Inline add */}
       <div className="mt-6 relative">
         <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-3 hover:border-gray-400 transition-colors">
           <span className="text-gray-300 text-sm">+</span>
@@ -164,7 +137,7 @@ export default function CompanyList() {
             placeholder="Add a company..."
             onKeyDown={(e) => {
               if (e.key === "Enter" && addSearch.trim()) {
-                quickAdd(addSearch.trim(), "");
+                quickAdd(addSearch.trim(), []);
                 setAddSearch("");
               }
             }}
@@ -174,12 +147,12 @@ export default function CompanyList() {
           <div className="fixed inset-0 z-30" onClick={() => setAddSearch("")} />
           <div className="absolute z-40 mt-1 left-0 right-0 rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
             {addMatches.map((company) => {
-              const app = state.applications.find((a) => a.company === company);
+              const roles = state.applications.filter((a) => a.company === company).map((a) => a.role);
               return (
-                <button key={company} onClick={() => { quickAdd(company, app?.role ?? ""); setAddSearch(""); }}
+                <button key={company} onClick={() => { quickAdd(company, roles); setAddSearch(""); }}
                   className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50">
                   <span className="font-medium">{company}</span>
-                  {app?.role && <span className="ml-2 text-xs text-gray-400">{app.role}</span>}
+                  <span className="ml-2 text-xs text-gray-400">{roles.length} {roles.length === 1 ? "role" : "roles"}</span>
                 </button>
               );
             })}
@@ -188,9 +161,7 @@ export default function CompanyList() {
       </div>
 
       {state.companies.length === 0 && !search && (
-        <div className="py-8 text-center text-sm text-gray-400">
-          No companies yet. Add one above or use the suggestions.
-        </div>
+        <div className="py-8 text-center text-sm text-gray-400">No companies yet. Add one above or use the suggestions.</div>
       )}
     </div>
   );

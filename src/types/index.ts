@@ -21,19 +21,21 @@ export type CompanyStatus =
   | "no-opening"
   | "withdrew";
 
+export interface CompanyRole {
+  id: string;
+  title: string;
+  whyRole: string;
+  roleUrl: string;
+  status: CompanyStatus;
+}
+
 export interface Company {
   id: string;
   name: string;
-  role: string;
-  status: CompanyStatus;
-  interviewDate: string;
-  roleUrl: string;
+  roles: CompanyRole[];
   companyUrl: string;
   whyCompany: string;
-  whyRole: string;
   notes: string;
-  questionsAsked: string[];
-  questionsToAsk: string[];
   createdAt: number;
 }
 

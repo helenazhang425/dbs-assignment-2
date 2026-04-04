@@ -95,19 +95,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const oldCompany = state.companies.find((c) => c.id === action.payload.id);
       const compUpdates = action.payload.updates as Record<string, unknown>;
       let newApps = state.applications;
-      // Sync name/role changes to Applications
-      if (oldCompany && (compUpdates.name || compUpdates.role)) {
-        newApps = state.applications.map((a) => {
-          if (a.company.toLowerCase() === oldCompany.name.toLowerCase() &&
-              a.role.toLowerCase() === oldCompany.role.toLowerCase()) {
-            return {
-              ...a,
-              ...(compUpdates.name ? { company: compUpdates.name as string } : {}),
-              ...(compUpdates.role ? { role: compUpdates.role as string } : {}),
-            };
-          }
-          return a;
-        });
+      // Sync company name changes to Applications
+      if (oldCompany && compUpdates.name && compUpdates.name !== oldCompany.name) {
+        newApps = state.applications.map((a) =>
+          a.company.toLowerCase() === oldCompany.name.toLowerCase()
+            ? { ...a, company: compUpdates.name as string }
+            : a
+        );
       }
       return {
         ...state,
@@ -338,12 +332,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // Sync company/role name changes to Companies
       if (updatedApp && (updates.company || updates.role)) {
         newCompanies = state.companies.map((c) => {
-          if (c.name.toLowerCase() === updatedApp.company.toLowerCase() &&
-              c.role.toLowerCase() === updatedApp.role.toLowerCase()) {
+          if (c.name.toLowerCase() === updatedApp.company.toLowerCase()) {
             return {
               ...c,
               ...(updates.company ? { name: updates.company } : {}),
-              ...(updates.role ? { role: updates.role } : {}),
             };
           }
           return c;
