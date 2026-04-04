@@ -1193,7 +1193,7 @@ export default function DashboardPage() {
               </div>
               {/* Edit form for week view */}
               {editingEventId && (() => {
-                const editEv = upcomingEvents.find((e) => e.id === editingEventId);
+                const editEv = state.events.find((e) => e.id === editingEventId);
                 return editEv ? <div className="mt-4">{renderEvent(editEv)}</div> : null;
               })()}
               {/* Selected date detail */}
