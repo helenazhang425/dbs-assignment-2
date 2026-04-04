@@ -91,13 +91,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           },
         ],
       };
-    case "UPDATE_COMPANY":
+    case "UPDATE_COMPANY": {
+      const oldCompany = state.companies.find((c) => c.id === action.payload.id);
+      const compUpdates = action.payload.updates as Record<string, unknown>;
+      let newApps = state.applications;
+      // Sync name/role changes to Applications
+      if (oldCompany && (compUpdates.name || compUpdates.role)) {
+        newApps = state.applications.map((a) => {
+          if (a.company.toLowerCase() === oldCompany.name.toLowerCase() &&
+              a.role.toLowerCase() === oldCompany.role.toLowerCase()) {
+            return {
+              ...a,
+              ...(compUpdates.name ? { company: compUpdates.name as string } : {}),
+              ...(compUpdates.role ? { role: compUpdates.role as string } : {}),
+            };
+          }
+          return a;
+        });
+      }
       return {
         ...state,
         companies: state.companies.map((c) =>
           c.id === action.payload.id ? { ...c, ...action.payload.updates } : c
         ),
+        applications: newApps,
       };
+    }
     case "DELETE_COMPANY":
       return {
         ...state,
@@ -312,13 +331,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           { ...action.payload, id: crypto.randomUUID(), createdAt: Date.now() },
         ],
       };
-    case "UPDATE_APPLICATION":
+    case "UPDATE_APPLICATION": {
+      const updatedApp = state.applications.find((a) => a.id === action.payload.id);
+      const updates = action.payload.updates;
+      let newCompanies = state.companies;
+      // Sync company/role name changes to Companies
+      if (updatedApp && (updates.company || updates.role)) {
+        newCompanies = state.companies.map((c) => {
+          if (c.name.toLowerCase() === updatedApp.company.toLowerCase() &&
+              c.role.toLowerCase() === updatedApp.role.toLowerCase()) {
+            return {
+              ...c,
+              ...(updates.company ? { name: updates.company } : {}),
+              ...(updates.role ? { role: updates.role } : {}),
+            };
+          }
+          return c;
+        });
+      }
       return {
         ...state,
         applications: state.applications.map((a) =>
-          a.id === action.payload.id ? { ...a, ...action.payload.updates } : a
+          a.id === action.payload.id ? { ...a, ...updates } : a
         ),
+        companies: newCompanies,
       };
+    }
     case "DELETE_APPLICATION":
       return {
         ...state,
