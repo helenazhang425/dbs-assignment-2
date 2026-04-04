@@ -21,10 +21,12 @@ const confidenceConfig: Record<string, { label: string; cls: string }> = {
 export default function QuestionsPage() {
   const { state, dispatch } = useApp();
   const [filter, setFilter] = useState<QuestionCategory | "all">("all");
+  const [confidenceFilter, setConfidenceFilter] = useState<Confidence | "all">("all");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [mode, setMode] = useState<"view" | "practice">("view");
+  const [mode, setMode] = useState<"view" | "practice" | "select">("view");
+  const [selectedForPractice, setSelectedForPractice] = useState<Set<string>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
 
   // Form state
@@ -51,6 +53,10 @@ export default function QuestionsPage() {
   const filtered = useMemo(() => {
     let result = state.questions;
     if (filter !== "all") result = result.filter((q) => q.category === filter);
+    if (confidenceFilter !== "all") {
+      if (confidenceFilter === null) result = result.filter((q) => q.confidence === null);
+      else result = result.filter((q) => q.confidence === confidenceFilter);
+    }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((qu) =>
@@ -58,11 +64,13 @@ export default function QuestionsPage() {
       );
     }
     return result;
-  }, [state.questions, filter, search]);
+  }, [state.questions, filter, confidenceFilter, search]);
 
-  // Shuffled questions for practice
+  // Shuffled questions for practice — use selected if any, otherwise filtered
   const practicePool = useMemo(() => {
-    const pool = [...filtered];
+    const pool = selectedForPractice.size > 0
+      ? filtered.filter((q) => selectedForPractice.has(q.id))
+      : [...filtered];
     // Fisher-Yates shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -180,6 +188,8 @@ export default function QuestionsPage() {
     if (mode !== "practice") return;
     function handleKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (practiceIndex >= practicePool.length) return;
+      if (swipeDir) return;
       if (e.key === "ArrowRight") markKnow();
       else if (e.key === "ArrowLeft") markStillLearning();
     }
@@ -196,6 +206,84 @@ export default function QuestionsPage() {
     setStopwatchTime(0);
     setAudioUrl(null);
     if (recording) stopRecording();
+  }
+
+  // Selection Screen
+  if (mode === "select") {
+    const categories = ["behavioral", "product-case", "role-specific"] as QuestionCategory[];
+    return (
+      <div>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Select Questions</h1>
+            <p className="mt-1 text-sm text-gray-500">{selectedForPractice.size} of {filtered.length} selected</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setMode("view")}>Cancel</Button>
+            <Button onClick={() => { startPractice(); }} disabled={selectedForPractice.size === 0}>
+              Start ({selectedForPractice.size})
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-4 flex items-center gap-3 text-xs">
+          <button onClick={() => setSelectedForPractice(new Set(filtered.map((q) => q.id)))}
+            className="text-indigo-500 hover:text-indigo-700">Select all</button>
+          <button onClick={() => setSelectedForPractice(new Set())}
+            className="text-gray-400 hover:text-gray-600">Clear all</button>
+        </div>
+
+        {categories.map((cat) => {
+          const catQuestions = filtered.filter((q) => q.category === cat);
+          if (catQuestions.length === 0) return null;
+          const allSelected = catQuestions.every((q) => selectedForPractice.has(q.id));
+          return (
+            <div key={cat} className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <button onClick={() => {
+                  const ids = catQuestions.map((q) => q.id);
+                  setSelectedForPractice((prev) => {
+                    const next = new Set(prev);
+                    if (allSelected) ids.forEach((id) => next.delete(id));
+                    else ids.forEach((id) => next.add(id));
+                    return next;
+                  });
+                }}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    cat === "behavioral" ? "bg-blue-50 text-blue-700" :
+                    cat === "product-case" ? "bg-purple-50 text-purple-700" : "bg-amber-50 text-amber-700"
+                  }`}>
+                  {categoryLabels[cat]} ({catQuestions.length})
+                </button>
+                <span className="text-xs text-gray-400">{allSelected ? "all selected" : ""}</span>
+              </div>
+              <div className="space-y-1">
+                {catQuestions.map((q) => {
+                  const isSelected = selectedForPractice.has(q.id);
+                  return (
+                    <label key={q.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50 ${isSelected ? "bg-indigo-50/50" : ""}`}>
+                      <input type="checkbox" checked={isSelected}
+                        onChange={() => setSelectedForPractice((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(q.id)) next.delete(q.id); else next.add(q.id);
+                          return next;
+                        })}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      <span className={`text-sm ${isSelected ? "text-gray-900" : "text-gray-600"}`}>{q.text}</span>
+                      {q.confidence && (
+                        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${confidenceConfig[q.confidence].cls}`}>
+                          {confidenceConfig[q.confidence].label}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   // Practice Mode UI
@@ -336,7 +424,7 @@ export default function QuestionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={startPractice}>Practice</Button>
+          <Button variant="secondary" onClick={() => { setMode("select"); setSelectedForPractice(new Set(filtered.map((q) => q.id))); }}>Practice</Button>
           <Button onClick={() => setShowAdd(true)}>Add Question</Button>
         </div>
       </div>
@@ -347,15 +435,30 @@ export default function QuestionsPage() {
           placeholder="Search questions..."
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
       </div>
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-1.5">
         {(["all", "behavioral", "product-case", "role-specific"] as const).map((cat) => (
           <button key={cat} onClick={() => setFilter(cat)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
               filter === cat ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}>
             {cat === "all" ? "All" : categoryLabels[cat]}
           </button>
         ))}
+        <span className="text-gray-200 mx-0.5">·</span>
+        {(["low", "medium", "high"] as const).map((c) => (
+          <button key={c} onClick={() => setConfidenceFilter(confidenceFilter === c ? "all" : c)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              confidenceFilter === c ? confidenceConfig[c].cls : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}>
+            {confidenceConfig[c].label}
+          </button>
+        ))}
+        <button onClick={() => setConfidenceFilter(confidenceFilter === null ? "all" : null)}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            confidenceFilter === null ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}>
+          New
+        </button>
       </div>
 
       {/* Question cards */}
