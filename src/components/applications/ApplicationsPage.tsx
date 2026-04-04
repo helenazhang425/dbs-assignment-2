@@ -98,10 +98,10 @@ export default function ApplicationsPage() {
     if (dateFilter.month) {
       result = result.filter((a) => a.appliedDate?.slice(0, 7) === `${dateFilter.year}-${dateFilter.month}`);
     }
-    // Apply column filters
+    // Apply column filters (supports partial match / contains)
     Object.entries(columnFilters).forEach(([key, value]) => {
       if (value) {
-        result = result.filter((a) => (a as unknown as Record<string, string>)[key]?.toLowerCase() === value.toLowerCase());
+        result = result.filter((a) => (a as unknown as Record<string, string>)[key]?.toLowerCase().includes(value.toLowerCase()));
       }
     });
     if (sortDir !== "none") {
@@ -370,7 +370,13 @@ export default function ApplicationsPage() {
                         <div className="absolute z-40 mt-1 left-0 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="p-1.5">
                             <input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} autoFocus
-                              placeholder="Search..."
+                              placeholder="Type and press Enter..."
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && filterSearch.trim()) {
+                                  setColumnFilters((prev) => ({ ...prev, [col.key]: filterSearch.trim() }));
+                                  setActiveFilter(null); setFilterSearch("");
+                                }
+                              }}
                               className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none" />
                           </div>
                           <div className="max-h-48 overflow-y-auto px-1 pb-1">
