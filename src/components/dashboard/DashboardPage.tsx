@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [newItem, setNewItem] = useState("");
   const [newItemDate, setNewItemDate] = useState("");
   const [calendarView, setCalendarView] = useState<"list" | "week" | "month">("list");
-  const [listMode, setListMode] = useState<"chrono" | "bytype">("chrono");
+  const [scheduleFilter, setScheduleFilter] = useState<string>("all");
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [companyPrepSections, setCompanyPrepSections] = useState<string[]>(() => {
     // Initialize with events that already have tasks
@@ -1056,73 +1056,42 @@ export default function DashboardPage() {
             return (<>
           {calendarView === "list" && (
               <div>
-                {/* Sub-toggle */}
-                <div className="mb-3 flex rounded-lg border border-gray-200 w-fit">
-                  <button onClick={() => setListMode("chrono")}
-                    className={`px-3 py-1 text-xs font-medium rounded-l-lg ${listMode === "chrono" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-50"}`}>
-                    Chronological
-                  </button>
-                  <button onClick={() => setListMode("bytype")}
-                    className={`px-3 py-1 text-xs font-medium rounded-r-lg ${listMode === "bytype" ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-50"}`}>
-                    By Type
-                  </button>
+                {/* Filter pills */}
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {([
+                    { value: "all", label: "All", dot: "" },
+                    { value: "interview", label: "Interview", dot: "bg-indigo-500" },
+                    { value: "practice", label: "Practice", dot: "bg-green-500" },
+                    { value: "networking", label: "Networking", dot: "bg-amber-500" },
+                    { value: "other", label: "Other", dot: "bg-gray-400" },
+                  ] as const).map((f) => (
+                    <button key={f.value}
+                      onClick={() => setScheduleFilter(scheduleFilter === f.value ? "all" : f.value)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        scheduleFilter === f.value
+                          ? "bg-gray-700 text-white"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}>
+                      {f.dot && <span className={`h-2 w-2 rounded-full ${f.dot}`} />}
+                      {f.label}
+                    </button>
+                  ))}
                 </div>
 
-                {upcomingEvents.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-gray-400">No upcoming events</p>
-                ) : listMode === "chrono" ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-4 pb-2 text-xs text-gray-400">
-                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Interview</span>
-                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /> Practice</span>
-                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> Networking</span>
+                {(() => {
+                  const filteredEvents = scheduleFilter === "all"
+                    ? upcomingEvents
+                    : upcomingEvents.filter((ev) => ev.category === scheduleFilter);
+                  return filteredEvents.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-400">
+                      {upcomingEvents.length === 0 ? "No upcoming events" : "No events match this filter"}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredEvents.map((ev) => renderEvent(ev, true))}
                     </div>
-                    {upcomingEvents.map((ev) => renderEvent(ev, true))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
-                        <span className="h-2 w-2 rounded-full bg-green-500" /> Practice
-                      </p>
-                      <div className="space-y-2">
-                        {practiceEvents.length === 0 ? (
-                          <p className="py-4 text-center text-xs text-gray-300">No practice sessions</p>
-                        ) : practiceEvents.map((ev) => renderEvent(ev))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
-                        <span className="h-2 w-2 rounded-full bg-indigo-500" /> Interviews
-                      </p>
-                      <div className="space-y-2">
-                        {interviewEvents.length === 0 ? (
-                          <p className="py-4 text-center text-xs text-gray-300">No upcoming interviews</p>
-                        ) : interviewEvents.map((ev) => renderEvent(ev))}
-                      </div>
-                    </div>
-                    {networkingEvents.length > 0 && (
-                      <div>
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
-                          <span className="h-2 w-2 rounded-full bg-amber-500" /> Networking
-                        </p>
-                        <div className="space-y-2">
-                          {networkingEvents.map((ev) => renderEvent(ev))}
-                        </div>
-                      </div>
-                    )}
-                    {otherEvents.length > 0 && (
-                      <div>
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
-                          <span className="h-2 w-2 rounded-full bg-gray-400" /> Other
-                        </p>
-                        <div className="space-y-2">
-                          {otherEvents.map((ev) => renderEvent(ev))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
               </div>
           )}
 
