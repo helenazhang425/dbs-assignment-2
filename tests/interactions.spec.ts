@@ -52,6 +52,25 @@ test.describe("InterviewReady interactions", () => {
     await expect(page.locator("text=S&O Lead")).toBeVisible();
   });
 
+  test("keeps notes separate when adding a second company role", async ({ page }) => {
+    await page.goto("/companies/c1");
+
+    const roleNotes = page.locator('textarea[placeholder="Anything to remember about this role..."]');
+
+    await expect(roleNotes).toBeVisible();
+    await roleNotes.fill("first role notes");
+
+    await page.getByText("+ Add role").click();
+    await page.locator('input[placeholder="Role title"]').fill("Second role");
+    await roleNotes.fill("second role notes");
+
+    await page.getByText("S&O Lead").click();
+    await expect(roleNotes).toHaveValue("first role notes");
+
+    await page.getByText("Second role").click();
+    await expect(roleNotes).toHaveValue("second role notes");
+  });
+
   test("filter questions by category", async ({ page }) => {
     await page.goto("/questions");
 

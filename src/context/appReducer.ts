@@ -1,4 +1,4 @@
-import { AppState, Question, Company, ChecklistItem, Story, PrepEvent, Application, SavedPosition } from "@/types";
+import { AppState, Question, Company, CompanyRole, ChecklistItem, Story, PrepEvent, Application, SavedPosition } from "@/types";
 
 export type AppAction =
   // Questions
@@ -9,6 +9,8 @@ export type AppAction =
   // Companies
   | { type: "ADD_COMPANY"; payload: Omit<Company, "id" | "createdAt"> }
   | { type: "UPDATE_COMPANY"; payload: { id: string; updates: Partial<Company> } }
+  | { type: "ADD_COMPANY_ROLE"; payload: { companyId: string; role: CompanyRole } }
+  | { type: "UPDATE_COMPANY_ROLE"; payload: { companyId: string; roleId: string; updates: Partial<CompanyRole> } }
   | { type: "DELETE_COMPANY"; payload: { id: string } }
   // Checklist
   | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null; eventId?: string | null; recurring?: "daily" | "weekly" | null } }
@@ -113,6 +115,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         applications: newApps,
       };
     }
+    case "ADD_COMPANY_ROLE":
+      return {
+        ...state,
+        companies: state.companies.map((c) =>
+          c.id === action.payload.companyId
+            ? { ...c, roles: [...c.roles, action.payload.role] }
+            : c
+        ),
+      };
+    case "UPDATE_COMPANY_ROLE":
+      return {
+        ...state,
+        companies: state.companies.map((c) => {
+          if (c.id !== action.payload.companyId) return c;
+
+          let updatedRole = false;
+          return {
+            ...c,
+            roles: c.roles.map((r) => {
+              if (updatedRole || r.id !== action.payload.roleId) return r;
+              updatedRole = true;
+              return { ...r, ...action.payload.updates };
+            }),
+          };
+        }),
+      };
     case "DELETE_COMPANY":
       return {
         ...state,

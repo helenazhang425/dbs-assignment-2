@@ -55,8 +55,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   }
 
   function updateRole(roleId: string, updates: Partial<CompanyRole>) {
-    const newRoles = company!.roles.map((r) => r.id === roleId ? { ...r, ...updates } : r);
-    update({ roles: newRoles });
+    dispatch({ type: "UPDATE_COMPANY_ROLE", payload: { companyId, roleId, updates } });
   }
 
   function syncRoleName(oldTitle: string, newTitle: string) {
@@ -100,7 +99,15 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
   function addRole() {
     const newRole: CompanyRole = { id: crypto.randomUUID(), title: "", whyRole: "", roleUrl: "", notes: "", status: "interviewing" };
-    update({ roles: [...company!.roles, newRole] });
+    dispatch({ type: "ADD_COMPANY_ROLE", payload: { companyId, role: newRole } });
+    setSelectedEventId(null);
+    setAddingInterviewForRole(null);
+    setNewEvDate("");
+    setNewEvStart("");
+    setNewEvEnd("");
+    setNewEvType("");
+    setAddRoleSearch("");
+    setRoleHighlight(-1);
     setExpandedRoleId(newRole.id);
   }
 
@@ -116,9 +123,12 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const today = new Date(new Date().toDateString());
 
   function getRoleEvents(roleTitle: string) {
+    const normalizedRoleTitle = roleTitle.trim().toLowerCase();
+    if (!normalizedRoleTitle) return [];
+
     return state.events
       .filter((ev) => ev.companyName?.toLowerCase() === company!.name.toLowerCase() &&
-        ev.role?.toLowerCase() === roleTitle.toLowerCase())
+        ev.role?.trim().toLowerCase() === normalizedRoleTitle)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
@@ -175,7 +185,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
       {/* Notes — shared */}
       <div className="mb-8">
-        <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Company notes</label>
         <textarea value={company.notes} onChange={(e) => update({ notes: e.target.value })}
           rows={2} placeholder="General notes, recruiter info, etc."
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
@@ -240,7 +250,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         if (!role) return null;
         const events = getRoleEvents(role.title);
         return (
-          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideUp 0.2s ease-out" }}>
+          <div key={role.id} className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideUp 0.2s ease-out" }}>
             {/* Role title with suggestions */}
             <div className="relative">
               <input key={role.id} defaultValue={role.title}
