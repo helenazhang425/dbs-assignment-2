@@ -11,6 +11,7 @@ export type AppAction =
   | { type: "UPDATE_COMPANY"; payload: { id: string; updates: Partial<Company> } }
   | { type: "ADD_COMPANY_ROLE"; payload: { companyId: string; role: CompanyRole } }
   | { type: "UPDATE_COMPANY_ROLE"; payload: { companyId: string; roleId: string; updates: Partial<CompanyRole> } }
+  | { type: "UPDATE_COMPANY_ROLE_AT_INDEX"; payload: { companyId: string; roleIndex: number; updates: Partial<CompanyRole> } }
   | { type: "DELETE_COMPANY"; payload: { id: string } }
   // Checklist
   | { type: "ADD_CHECKLIST_ITEM"; payload: { text: string; dueDate?: string; companyId?: string | null; eventId?: string | null; recurring?: "daily" | "weekly" | null } }
@@ -140,6 +141,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             }),
           };
         }),
+      };
+    case "UPDATE_COMPANY_ROLE_AT_INDEX":
+      return {
+        ...state,
+        companies: state.companies.map((c) =>
+          c.id === action.payload.companyId
+            ? {
+                ...c,
+                roles: c.roles.map((r, index) =>
+                  index === action.payload.roleIndex
+                    ? { ...r, ...action.payload.updates }
+                    : r
+                ),
+              }
+            : c
+        ),
       };
     case "DELETE_COMPANY":
       return {

@@ -7,12 +7,16 @@ import { InterviewType, CompanyRole, CompanyStatus } from "@/types";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 
+function getRoleKey(role: CompanyRole, index: number) {
+  return `${role.id || "role"}:${index}`;
+}
+
 export default function CompanyDetail({ companyId }: { companyId: string }) {
   const { state, dispatch } = useApp();
   const router = useRouter();
   const company = state.companies.find((c) => c.id === companyId);
 
-  const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
+  const [expandedRoleKey, setExpandedRoleKey] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [editingQ, setEditingQ] = useState<{ eventId: string; type: "asked" | "toAsk"; index: number } | null>(null);
   const [editQValue, setEditQValue] = useState("");
@@ -21,7 +25,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   const [newEvStart, setNewEvStart] = useState("");
   const [newEvEnd, setNewEvEnd] = useState("");
   const [newEvType, setNewEvType] = useState("");
-  const [deleteRoleId, setDeleteRoleId] = useState<string | null>(null);
+  const [deleteRoleKey, setDeleteRoleKey] = useState<string | null>(null);
   const [addingRole, setAddingRole] = useState(false);
   const [addRoleSearch, setAddRoleSearch] = useState("");
   const [roleHighlight, setRoleHighlight] = useState(-1);
@@ -35,11 +39,11 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
   // Auto-expand first active role
   useEffect(() => {
-    if (company && !expandedRoleId) {
-      const activeRoles = company.roles.filter((r) => r.status === "interviewing");
-      if (activeRoles.length > 0) setExpandedRoleId(activeRoles[0].id);
+    if (company && !expandedRoleKey) {
+      const activeRoleIndex = company.roles.findIndex((r) => r.status === "interviewing");
+      if (activeRoleIndex >= 0) setExpandedRoleKey(getRoleKey(company.roles[activeRoleIndex], activeRoleIndex));
     }
-  }, [company, expandedRoleId]);
+  }, [company, expandedRoleKey]);
 
   if (!company) {
     return (
@@ -54,8 +58,8 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
     dispatch({ type: "UPDATE_COMPANY", payload: { id: companyId, updates } });
   }
 
-  function updateRole(roleId: string, updates: Partial<CompanyRole>) {
-    dispatch({ type: "UPDATE_COMPANY_ROLE", payload: { companyId, roleId, updates } });
+  function updateRole(roleIndex: number, updates: Partial<CompanyRole>) {
+    dispatch({ type: "UPDATE_COMPANY_ROLE_AT_INDEX", payload: { companyId, roleIndex, updates } });
   }
 
   function syncRoleName(oldTitle: string, newTitle: string) {
@@ -76,10 +80,10 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
       });
   }
 
-  function changeRoleStatus(roleId: string, newStatus: CompanyStatus) {
-    const role = company!.roles.find((r) => r.id === roleId);
+  function changeRoleStatus(roleIndex: number, newStatus: CompanyStatus) {
+    const role = company!.roles[roleIndex];
     if (!role) return;
-    updateRole(roleId, { status: newStatus });
+    updateRole(roleIndex, { status: newStatus });
     // Sync to matching applications
     const verdict = STATUS_TO_LABEL[newStatus];
     state.applications
@@ -91,10 +95,12 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   }
 
   function confirmDeleteRole() {
-    if (!deleteRoleId) return;
-    update({ roles: company!.roles.filter((r) => r.id !== deleteRoleId) });
-    if (expandedRoleId === deleteRoleId) setExpandedRoleId(null);
-    setDeleteRoleId(null);
+    if (!deleteRoleKey) return;
+    const deleteRoleIndex = company!.roles.findIndex((role, index) => getRoleKey(role, index) === deleteRoleKey);
+    if (deleteRoleIndex < 0) return;
+    update({ roles: company!.roles.filter((_, index) => index !== deleteRoleIndex) });
+    if (expandedRoleKey === deleteRoleKey) setExpandedRoleKey(null);
+    setDeleteRoleKey(null);
   }
 
   function addRole() {
@@ -108,7 +114,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
     setNewEvType("");
     setAddRoleSearch("");
     setRoleHighlight(-1);
-    setExpandedRoleId(newRole.id);
+    setExpandedRoleKey(getRoleKey(newRole, company!.roles.length));
   }
 
   // Roles from applications that aren't already on this company card
@@ -138,8 +144,9 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
   }
 
   const COMPLETED_STATUSES: CompanyStatus[] = ["offer", "rejected-no-interview", "rejected-first-round", "rejected-complete", "no-opening", "withdrew"];
-  const activeRoles = company.roles.filter((r) => !COMPLETED_STATUSES.includes(r.status));
-  const archivedRoles = company.roles.filter((r) => COMPLETED_STATUSES.includes(r.status));
+  const roleItems = company.roles.map((role, index) => ({ role, index, key: getRoleKey(role, index) }));
+  const activeRoles = roleItems.filter(({ role }) => !COMPLETED_STATUSES.includes(role.status));
+  const archivedRoles = roleItems.filter(({ role }) => COMPLETED_STATUSES.includes(role.status));
 
   return (
     <div>
@@ -198,15 +205,15 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
       {/* Role grid cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {activeRoles.map((role) => {
+        {activeRoles.map(({ role, index, key }) => {
           const events = getRoleEvents(role.title);
           const nextEv = events.find((ev) => new Date(ev.date + "T12:00:00") >= today);
-          const isSelected = expandedRoleId === role.id;
+          const isSelected = expandedRoleKey === key;
 
           return (
-            <div key={role.id} className="group/card relative">
+            <div key={key} className="group/card relative">
               <div
-                onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
+                onClick={() => { setExpandedRoleKey(isSelected ? null : key); setSelectedEventId(null); }}
                 className={`h-full rounded-xl border p-5 cursor-pointer transition-all flex flex-col justify-between ${
                   isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
                   "border-gray-200 bg-white hover:shadow-md hover:-translate-y-0.5"
@@ -228,7 +235,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                 </div>
               </div>
               {/* Delete button */}
-              <button onClick={(e) => { e.stopPropagation(); setDeleteRoleId(role.id); }}
+              <button onClick={(e) => { e.stopPropagation(); setDeleteRoleKey(key); }}
                 className="absolute top-2 right-2 invisible group-hover/card:visible rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -245,15 +252,16 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
       </div>
 
       {/* Expanded role detail */}
-      {expandedRoleId && (() => {
-        const role = company.roles.find((r) => r.id === expandedRoleId);
-        if (!role) return null;
+      {expandedRoleKey && (() => {
+        const roleItem = roleItems.find((item) => item.key === expandedRoleKey);
+        if (!roleItem) return null;
+        const { role, index, key } = roleItem;
         const events = getRoleEvents(role.title);
         return (
-          <div key={role.id} className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideUp 0.2s ease-out" }}>
+          <div key={key} className="mt-6 rounded-xl border border-gray-200 bg-white p-6 space-y-4" style={{ animation: "slideUp 0.2s ease-out" }}>
             {/* Role title with suggestions */}
             <div className="relative">
-              <input key={role.id} defaultValue={role.title}
+              <input key={key} defaultValue={role.title}
                 onFocus={(e) => { e.target.dataset.originalTitle = role.title; setAddRoleSearch(e.target.value); setRoleHighlight(-1); }}
                 onChange={(e) => { setAddRoleSearch(e.target.value); setRoleHighlight(-1); }}
                 onBlur={(e) => {
@@ -262,7 +270,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     const newTitle = e.target.value;
                     const oldTitle = e.target.dataset.originalTitle ?? role.title;
                     if (newTitle !== oldTitle) {
-                      updateRole(role.id, { title: newTitle });
+                      updateRole(index, { title: newTitle });
                       syncRoleName(oldTitle, newTitle);
                     }
                     setAddRoleSearch("");
@@ -279,7 +287,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       const s = matches[roleHighlight];
                       const oldTitle = (e.target as HTMLInputElement).dataset.originalTitle ?? role.title;
                       (e.target as HTMLInputElement).value = s.role;
-                      updateRole(role.id, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
+                      updateRole(index, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
                       syncRoleName(oldTitle, s.role);
                       setAddRoleSearch("");
                       setRoleHighlight(-1);
@@ -302,7 +310,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       if (input) {
                         const oldTitle = input.dataset.originalTitle ?? role.title;
                         input.value = s.role;
-                        updateRole(role.id, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
+                        updateRole(index, { title: s.role, status: LABEL_TO_STATUS[s.verdict] ?? role.status });
                         syncRoleName(oldTitle, s.role);
                         setAddRoleSearch("");
                         setRoleHighlight(-1);
@@ -321,7 +329,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                 <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
-                <input value={role.roleUrl} onChange={(e) => updateRole(role.id, { roleUrl: e.target.value })}
+                <input value={role.roleUrl} onChange={(e) => updateRole(index, { roleUrl: e.target.value })}
                   placeholder="Role URL" size={role.roleUrl ? role.roleUrl.length || 10 : 10}
                   className="text-xs text-indigo-500 placeholder-gray-300 bg-transparent border-none focus:outline-none" />
                 {role.roleUrl && (
@@ -332,13 +340,13 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                   </a>
                 )}
               </div>
-              <StatusDropdown status={role.status} onChange={(s) => changeRoleStatus(role.id, s)} />
+              <StatusDropdown status={role.status} onChange={(s) => changeRoleStatus(index, s)} />
             </div>
 
             {/* Why this role */}
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Why this role?</label>
-              <textarea value={role.whyRole} onChange={(e) => updateRole(role.id, { whyRole: e.target.value })}
+              <textarea value={role.whyRole} onChange={(e) => updateRole(index, { whyRole: e.target.value })}
                 rows={2} placeholder="Why is this role a good fit for you?"
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
             </div>
@@ -346,7 +354,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
             {/* Notes */}
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Notes</label>
-              <textarea value={role.notes ?? ""} onChange={(e) => updateRole(role.id, { notes: e.target.value })}
+              <textarea value={role.notes ?? ""} onChange={(e) => updateRole(index, { notes: e.target.value })}
                 rows={2} placeholder="Anything to remember about this role..."
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
             </div>
@@ -363,7 +371,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     {/* Add next interview — always at top of timeline (newest first) */}
                     <div className="relative pb-4 flex items-center">
                       <div className="absolute -left-3 h-2.5 w-2.5 rounded-full border-2 border-dashed border-indigo-300 bg-white" />
-                      {addingInterviewForRole === role.id ? (
+                      {addingInterviewForRole === key ? (
                         <div className="w-full rounded-lg border border-indigo-200 bg-indigo-50/30 px-3 py-2 space-y-2" style={{ animation: "slideIn 0.2s ease-out" }}>
                           <div className="grid grid-cols-3 gap-2">
                             <input type="date" value={newEvDate} onChange={(e) => setNewEvDate(e.target.value)}
@@ -390,7 +398,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                           </div>
                         </div>
                       ) : (
-                        <div onClick={() => setAddingInterviewForRole(role.id)}
+                        <div onClick={() => setAddingInterviewForRole(key)}
                           className="w-full rounded-lg border border-dashed border-indigo-200 px-3 py-2 text-xs text-indigo-500 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
                           + Add next interview
                         </div>
@@ -553,7 +561,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
 
               {/* Add interview — shown below timeline when no events exist */}
               {events.length === 0 && (
-                addingInterviewForRole === role.id ? (
+                addingInterviewForRole === key ? (
                   <div className="mt-2 rounded-lg border border-gray-200 p-3 space-y-2" style={{ animation: "slideIn 0.2s ease-out" }}>
                     <div className="grid grid-cols-3 gap-2">
                       <input type="date" value={newEvDate} onChange={(e) => setNewEvDate(e.target.value)}
@@ -580,7 +588,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setAddingInterviewForRole(role.id)}
+                  <button onClick={() => setAddingInterviewForRole(key)}
                     className="mt-2 text-xs text-indigo-500 hover:text-indigo-700">+ Add interview</button>
                 )
               )}
@@ -593,13 +601,13 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
         <div className="mt-6">
           <p className="mb-3 text-xs text-gray-400">{archivedRoles.length} archived {archivedRoles.length === 1 ? "role" : "roles"}</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {archivedRoles.map((role) => {
+            {archivedRoles.map(({ role, key }) => {
               const events = getRoleEvents(role.title);
-              const isSelected = expandedRoleId === role.id;
+              const isSelected = expandedRoleKey === key;
               return (
-                <div key={role.id} className="group/card relative">
+                <div key={key} className="group/card relative">
                   <div
-                    onClick={() => { setExpandedRoleId(isSelected ? null : role.id); setSelectedEventId(null); }}
+                    onClick={() => { setExpandedRoleKey(isSelected ? null : key); setSelectedEventId(null); }}
                     className={`h-full rounded-xl border p-5 cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected ? "border-indigo-300 bg-indigo-50/30 shadow-md" :
                       "border-gray-200 bg-gray-100 hover:shadow-sm"
@@ -614,7 +622,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
                       <p>{events.length} {events.length === 1 ? "round" : "rounds"}</p>
                     </div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); setDeleteRoleId(role.id); }}
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteRoleKey(key); }}
                     className="absolute top-2 right-2 invisible group-hover/card:visible rounded-full p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -628,12 +636,12 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
       )}
 
       {/* Delete role confirmation */}
-      <Modal open={!!deleteRoleId} onClose={() => setDeleteRoleId(null)} title="Delete role?">
+      <Modal open={!!deleteRoleKey} onClose={() => setDeleteRoleKey(null)} title="Delete role?">
         <p className="text-sm text-gray-600 mb-4">
-          Are you sure you want to delete <span className="font-medium text-gray-900">{company.roles.find((r) => r.id === deleteRoleId)?.title || "this role"}</span>? This will remove all associated data.
+          Are you sure you want to delete <span className="font-medium text-gray-900">{roleItems.find((item) => item.key === deleteRoleKey)?.role.title || "this role"}</span>? This will remove all associated data.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={() => setDeleteRoleId(null)}
+          <button onClick={() => setDeleteRoleKey(null)}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
           <button onClick={confirmDeleteRole}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700">Delete</button>

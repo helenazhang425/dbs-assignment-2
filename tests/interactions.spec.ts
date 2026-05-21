@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { appReducer } from "../src/context/appReducer";
+import { AppState } from "../src/types";
 
 test.describe("InterviewReady interactions", () => {
   test("navigate between pages using navbar", async ({ page }) => {
@@ -69,6 +71,39 @@ test.describe("InterviewReady interactions", () => {
 
     await page.getByText("Second role").click();
     await expect(roleNotes).toHaveValue("second role notes");
+  });
+
+  test("updates a role by company index when stored role ids are duplicated", () => {
+    const state = {
+      questions: [],
+      checklist: [],
+      stories: [],
+      events: [],
+      applications: [],
+      savedPositions: [],
+      companies: [
+        {
+          id: "company-1",
+          name: "Spring Health",
+          companyUrl: "",
+          whyCompany: "",
+          notes: "",
+          createdAt: 0,
+          roles: [
+            { id: "duplicate-role", title: "Senior Pricing Strategist", whyRole: "", roleUrl: "", notes: "pricing notes", status: "interviewing" as const },
+            { id: "duplicate-role", title: "Associate Director", whyRole: "", roleUrl: "", notes: "director notes", status: "interviewing" as const },
+          ],
+        },
+      ],
+    } satisfies AppState;
+
+    const nextState = appReducer(state, {
+      type: "UPDATE_COMPANY_ROLE_AT_INDEX",
+      payload: { companyId: "company-1", roleIndex: 1, updates: { notes: "updated director notes" } },
+    });
+
+    expect(nextState.companies[0].roles[0].notes).toBe("pricing notes");
+    expect(nextState.companies[0].roles[1].notes).toBe("updated director notes");
   });
 
   test("filter questions by category", async ({ page }) => {
